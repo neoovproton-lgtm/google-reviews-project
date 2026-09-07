@@ -58,6 +58,30 @@ def reviews(limit: int | None = LimitOpt, city: list[str] = CityOpt) -> None:
 
 
 @app.command()
+def score() -> None:
+    """A3 — score = avis/mois × (1 − taux de réponse) ; qualifie ≥ 10 avis/mois et < 50 %."""
+    _setup()
+    from app.scoring import score_all
+
+    typer.echo(score_all())
+
+
+StatusOpt = typer.Option("qualified", "--status", "-s", help="Statut à exporter (qualified…).")
+ExportLimitOpt = typer.Option(300, "--limit", "-n", help="Nombre max de lignes.")
+
+
+@app.command()
+def export(status: str = StatusOpt, limit: int = ExportLimitOpt) -> None:
+    """A3 — Exporte la liste (CSV) dans data/exports/, triée par score décroissant."""
+    _setup()
+    from app.export import write_export
+
+    with session_scope() as session:
+        path = write_export(session, get_settings().data_dir / "exports", status, limit)
+    typer.echo(f"Export : {path}")
+
+
+@app.command()
 def jobs() -> None:
     """État des jobs de scraping par ville."""
     _setup()

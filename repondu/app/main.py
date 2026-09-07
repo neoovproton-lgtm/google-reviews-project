@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -158,6 +158,25 @@ def list_prospects(
         stmt = stmt.where(Prospect.city == city)
     stmt = stmt.order_by(Prospect.score.desc().nullslast(), Prospect.id).limit(limit).offset(offset)
     return [ProspectOut.model_validate(p) for p in session.scalars(stmt)]
+
+
+@app.get("/prospects/export.csv", dependencies=[AuthDep])
+def export_prospects(
+    session: SessionDep,
+    status: str | None = Query(default=ProspectStatus.QUALIFIED),
+    city: str | None = None,
+    limit: int = Query(default=300, le=10000),
+) -> Response:
+    from app.export import select_for_export, to_csv
+
+    if status and status not in ProspectStatus.ALL:
+        raise HTTPException(status_code=422, detail=f"status doit être parmi {ProspectStatus.ALL}")
+    body = to_csv(select_for_export(session, status, limit, city))
+    return Response(
+        content=body,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="prospects-{status or "all"}.csv"'},
+    )
 
 
 @app.get("/prospects/{prospect_id}", dependencies=[AuthDep])
