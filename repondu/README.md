@@ -74,6 +74,7 @@ est défini.
 | `GET /replies/to-publish`, `POST /replies/{id}/published` | File de publication et log de publication. |
 | `POST /reports/weekly?force=` | Rapports hebdomadaires clients. |
 | `GET /establishments/{id}/messages` | Journal des messages envoyés au client. |
+| `POST /surveys/send?force=`, `POST /establishments/{id}/feedback`, `GET /bilan` | Questionnaire de fin d'essai et bilan J+45 (Phase E). |
 
 ```bash
 curl -H "Authorization: Bearer $API_TOKEN" -X POST localhost:8000/scrape \
@@ -125,6 +126,14 @@ docker compose run --rm cli weekly-report --force    # rapport hebdomadaire (aut
 Boîtes à configurer dans `.env` : `SERVICE_FROM_ADDRESS` (+ `SERVICE_IMAP_*` pour les vetos par
 mail), `MANAGER_IMAP_*` (compte Google gestionnaire, notifications d'avis),
 `GOOGLE_MANAGER_EMAIL`. Captures d'écran de l'invitation dans `data/onboarding/`.
+
+### Phase E — bilan
+
+```bash
+docker compose run --rm cli bilan                 # chiffres du bilan (idem /bilan Telegram)
+docker compose run --rm cli bilan --send-surveys  # questionnaires des essais terminés (auto via scheduler)
+# Appel de 5 min : /bilan <client> oui|non [prix] [ce qui manque]
+```
 
 ### Exploitation
 

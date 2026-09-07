@@ -35,7 +35,8 @@ repondu/
                   events.py (C5 : webhooks), inbox.py (C4 : IMAP), stats.py (entonnoir)
     service/      Phase D : mailer.py (mails/SMS/Telegram clients + journal), onboarding.py (D1),
                   notifications.py + inboxes.py (D2/D3 : boîtes gestionnaire et service),
-                  loop.py (D3 : avis → brouillon → veto → publication, stats), report.py (D4)
+                  loop.py (D3 : avis → brouillon → veto → publication, stats), report.py (D4),
+                  survey.py (E1 : questionnaire de fin d'essai, bilan J+45)
     scheduler.py  boucle horaire (service docker `scheduler`) : prospection + service client
   tests/          pytest ; fixtures HTML dans tests/fixtures/
   data/           cities.csv, base SQLite, exports (ignorés par git sauf cities.csv)

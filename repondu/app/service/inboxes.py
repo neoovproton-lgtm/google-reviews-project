@@ -13,6 +13,7 @@ from app.models import EmailEvent, utcnow
 from app.outreach.inbox import Fetcher, fetch_unseen_imap, parse_rfc822
 from app.service.loop import process_client_reply, process_establishment, refresh_reviews
 from app.service.notifications import match_establishment, parse_notification
+from app.service.survey import SURVEY_TAG_RE, process_survey_reply
 from app.telegram.client import Telegram
 
 log = logging.getLogger(__name__)
@@ -112,12 +113,22 @@ def poll_service_inbox(
         "ignored": 0,
         "unknown": 0,
         "duplicate": 0,
+        "survey": 0,
     }
     if cfg is None:
         return out
     for uid, raw in (fetcher or fetch_unseen_imap)(cfg):
         out["messages"] += 1
         mail = parse_rfc822(raw, uid)
+        if SURVEY_TAG_RE.search(mail.subject or ""):
+            if process_survey_reply(session, mail, now) == "recorded":
+                out["survey"] += 1
+                if telegram and settings.telegram_chat_id:
+                    telegram.send_message(
+                        settings.telegram_chat_id,
+                        f"📋 Questionnaire de fin d'essai reçu de {mail.from_address}.",
+                    )
+            continue
         kind = process_client_reply(session, mail, now)
         out[kind] = out.get(kind, 0) + 1
         if kind in ("approved", "rejected") and telegram and settings.telegram_chat_id:

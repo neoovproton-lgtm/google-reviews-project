@@ -775,3 +775,49 @@ def establishment_messages(establishment_id: int, session: SessionDep) -> list[d
         }
         for m in rows
     ]
+
+
+# --- Phase E : fin d'essai et bilan --------------------------------------------------------------
+
+
+class FeedbackIn(BaseModel):
+    would_continue: bool | None = None
+    price_willing: float | None = None
+    missing: str | None = None
+    raw: str | None = None
+
+
+@app.post("/establishments/{establishment_id}/feedback", dependencies=[AuthDep])
+def post_feedback(establishment_id: int, body: FeedbackIn, session: SessionDep) -> dict:
+    from app.service.survey import record_feedback
+
+    est = session.get(Establishment, establishment_id)
+    if est is None:
+        raise HTTPException(status_code=404, detail="Établissement inconnu")
+    answers = {
+        "would_continue": None if body.would_continue is None else int(body.would_continue),
+        "price_willing": body.price_willing,
+        "missing": body.missing,
+    }
+    fb = record_feedback(session, est, answers, body.raw, "api")
+    return {
+        "establishment_id": est.id,
+        "would_continue": fb.would_continue,
+        "price_willing": fb.price_willing,
+        "missing": fb.missing,
+        "source": fb.source,
+    }
+
+
+@app.post("/surveys/send", dependencies=[AuthDep])
+def send_surveys(session: SessionDep, force: bool = False) -> dict:
+    from app.service.survey import send_end_of_trial_surveys
+
+    return {"sent": [e.id for e in send_end_of_trial_surveys(session, force=force)]}
+
+
+@app.get("/bilan", dependencies=[AuthDep])
+def get_bilan(session: SessionDep) -> dict:
+    from app.service.survey import bilan
+
+    return bilan(session)

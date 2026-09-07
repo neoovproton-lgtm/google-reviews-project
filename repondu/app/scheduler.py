@@ -60,6 +60,7 @@ def service_tick(settings=None) -> dict:
     from app.service.loop import run_service_cycle
     from app.service.onboarding import send_reminders
     from app.service.report import send_weekly_reports
+    from app.service.survey import send_end_of_trial_surveys
     from app.telegram.client import get_telegram
 
     settings = settings or get_settings()
@@ -81,6 +82,7 @@ def service_tick(settings=None) -> dict:
         with session_scope() as s:
             out["reminders"] = [e.id for e in send_reminders(s, settings=settings)]
             out["reports"] = [e.id for e in send_weekly_reports(s, settings=settings)]
+            out["surveys"] = [e.id for e in send_end_of_trial_surveys(s, settings=settings)]
     except Exception as exc:  # noqa: BLE001
         log.exception("rappels / rapports")
         out["reminders"] = f"erreur : {exc}"

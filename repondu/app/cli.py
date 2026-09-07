@@ -330,6 +330,23 @@ def service_inboxes() -> None:
     typer.echo(service_tick())
 
 
+SendSurveysOpt = typer.Option(False, "--send-surveys", help="Envoie les questionnaires dus.")
+
+
+@app.command()
+def bilan(send_surveys: bool = SendSurveysOpt) -> None:
+    """E1 — Bilan J+45 (texte identique à /bilan Telegram)."""
+    _setup()
+    from app.service.survey import bilan as _bilan
+    from app.service.survey import format_bilan, send_end_of_trial_surveys
+
+    with session_scope() as session:
+        if send_surveys:
+            names = [e.name for e in send_end_of_trial_surveys(session)]
+            typer.echo(f"Questionnaires envoyés : {names}")
+        typer.echo(format_bilan(_bilan(session)))
+
+
 @app.command()
 def jobs() -> None:
     """État des jobs de scraping par ville."""

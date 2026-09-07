@@ -35,3 +35,9 @@ Ordre : A1 → A2 → A3 → A4. Chaque issue se termine par `docs/handoff/<issu
 | [D2](D2-new-review-detection.md) | Notifications Google (IMAP) + rafraîchissement Maps → tâches | `feat/D2-new-review-detection` | fait |
 | [D3](D3-reply-loop.md) | Avis → réponse → veto 24 h → publication → log, délai < 24 h | `feat/D3-reply-loop` | fait |
 | [D4](D4-weekly-report.md) | Rapport hebdomadaire client chaque lundi | `feat/D4-weekly-report` | fait |
+
+# Issues — Phase E : bilan
+
+| Issue | Titre | Branche | Statut |
+|---|---|---|---|
+| [E1](E1-trial-review.md) | Questionnaire de fin d'essai, bilan J+45 | `feat/E1-trial-review` | fait |

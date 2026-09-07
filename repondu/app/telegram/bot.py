@@ -42,6 +42,7 @@ HELP = (
     "/client <séquence> — convertir un oui en client et envoyer l'invitation gestionnaire\n"
     "/gestionnaire <client> — accès obtenu, l'essai de 30 jours démarre\n"
     "/apublier — réponses approuvées à coller sur Google · /publie <id> — publiée\n"
+    "/bilan — chiffres du bilan · /bilan <client> oui|non [prix] [manque…] — saisir un appel\n"
     "Les réponses proposées arrivent ici avec les boutons Approuver / Refuser."
 )
 
@@ -101,6 +102,8 @@ def _handle_message(message: dict, session: Session, telegram: Telegram) -> None
         _to_publish_command(chat_id, session, telegram)
     elif command == "/publie":
         _published_command(chat_id, text, session, telegram)
+    elif command == "/bilan":
+        _bilan_command(chat_id, text, session, telegram)
     elif state and state.state:
         _answer_step(chat_id, text, session, telegram, state)
     else:
@@ -339,3 +342,25 @@ def _published_command(chat_id: str, text: str, session: Session, telegram: Tele
         telegram.send_message(chat_id, str(exc))
         return
     telegram.send_message(chat_id, f"Réponse #{reply.id} publiée ✅")
+
+
+def _bilan_command(chat_id: str, text: str, session: Session, telegram: Telegram) -> None:
+    from app.service.survey import bilan, format_bilan, parse_answers, record_feedback
+
+    parts = text.split(maxsplit=2)
+    if len(parts) < 2:
+        telegram.send_message(chat_id, format_bilan(bilan(session)))
+        return
+    est = session.get(Establishment, int(parts[1])) if parts[1].isdigit() else None
+    if est is None or len(parts) < 3:
+        telegram.send_message(chat_id, "Usage : /bilan <client> oui|non [prix] [ce qui manque]")
+        return
+    answers = parse_answers(
+        parts[2].replace(" ", "\n", 1) if len(parts[2].split()) > 1 else parts[2]
+    )
+    fb = record_feedback(session, est, answers, parts[2], "telegram")
+    telegram.send_message(
+        chat_id,
+        f"Bilan {est.name} enregistré : continuerait={fb.would_continue}, prix={fb.price_willing}, "
+        f"manque={fb.missing or '—'}",
+    )

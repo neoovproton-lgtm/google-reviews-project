@@ -59,8 +59,10 @@ def compute_stats(session: Session) -> dict:
 
     from app.outreach.stats import funnel
     from app.service.loop import service_stats
+    from app.service.survey import bilan
 
     return {
+        "bilan": bilan(session),
         "service": service_stats(session),
         "outreach": funnel(session),
         "mailboxes": mailboxes,

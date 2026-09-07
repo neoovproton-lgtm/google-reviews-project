@@ -156,6 +156,7 @@ class Establishment(Base):
     baseline_rating: Mapped[float | None] = mapped_column(Float)
     last_review_check_at: Mapped[datetime | None] = mapped_column(DateTime)
     last_report_at: Mapped[datetime | None] = mapped_column(DateTime)
+    survey_sent_at: Mapped[datetime | None] = mapped_column(DateTime)
 
     replies: Mapped[list[Reply]] = relationship(back_populates="establishment")
 
@@ -369,3 +370,20 @@ class ClientMessage(Base):
     provider_message_id: Mapped[str | None] = mapped_column(String(255))
     error: Mapped[str | None] = mapped_column(Text)
     sent_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class TrialFeedback(Base):
+    """Réponse au questionnaire de fin d'essai (Phase E), une par client."""
+
+    __tablename__ = "trial_feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    establishment_id: Mapped[int] = mapped_column(
+        ForeignKey("establishments.id"), unique=True, index=True
+    )
+    would_continue: Mapped[int | None] = mapped_column(Integer)  # 1 oui, 0 non, NULL inconnu
+    price_willing: Mapped[float | None] = mapped_column(Float)  # €/mois
+    missing: Mapped[str | None] = mapped_column(Text)
+    raw: Mapped[str | None] = mapped_column(Text)
+    source: Mapped[str | None] = mapped_column(String(32))  # mail | telegram | api
+    collected_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
