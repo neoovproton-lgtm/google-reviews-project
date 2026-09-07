@@ -20,7 +20,10 @@ from app.outreach.mailboxes import effective_quota, pick_mailbox, remaining_toda
 from tests.fakes import FakeEmailProvider, FakeLLM
 
 MONDAY_10H_PARIS = datetime(2026, 9, 7, 8, 0)  # lundi 10 h à Paris (UTC+2)
-REPLY = {"reply": "Merci beaucoup pour ce retour sur le risotto, à très bientôt chez nous !", "detail_reused": "risotto"}
+REPLY = {
+    "reply": "Merci beaucoup pour ce retour sur le risotto, à très bientôt chez nous !",
+    "detail_reused": "risotto",
+}
 REPLY_NEG = {
     "reply": "Un risotto froid, ce n'est pas ce que nous voulons servir. Écrivez-nous à gerant@chezmarcel.fr pour en parler.",
     "detail_reused": "risotto froid",

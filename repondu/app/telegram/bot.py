@@ -35,6 +35,8 @@ HELP = (
     "/onboard — créer le profil d'un établissement (5 questions)\n"
     "/profils — lister les établissements de cette conversation\n"
     "/annuler — abandonner le formulaire en cours\n"
+    "/dm — recevoir le lot du jour de DM Instagram/Facebook à envoyer\n"
+    "/envoye <id> — marquer un DM comme envoyé\n"
     "Les réponses proposées arrivent ici avec les boutons Approuver / Refuser."
 )
 
@@ -78,6 +80,10 @@ def _handle_message(message: dict, session: Session, telegram: Telegram) -> None
             telegram.send_message(chat_id, "Rien à annuler.")
     elif command == "/profils":
         _list_profiles(chat_id, session, telegram)
+    elif command == "/dm":
+        _deliver_dms(chat_id, session, telegram)
+    elif command == "/envoye":
+        _mark_dm_sent(chat_id, text, session, telegram)
     elif state and state.state:
         _answer_step(chat_id, text, session, telegram, state)
     else:
@@ -189,3 +195,29 @@ def _handle_callback(callback: dict, session: Session, telegram: Telegram) -> No
     label = "approuvée ✅" if action == "approve" else "refusée ❌"
     telegram.answer_callback(callback_id, f"Réponse {label}")
     telegram.send_message(chat_id, f"Réponse #{reply.id} {label}.")
+
+
+def _deliver_dms(chat_id: str, session: Session, telegram: Telegram) -> None:
+    from app.outreach.channels import deliver_dm_batch
+
+    batch = deliver_dm_batch(session, telegram, chat_id, get_settings().outreach_dm_batch)
+    if not batch:
+        telegram.send_message(chat_id, "Aucun DM en attente.")
+    else:
+        telegram.send_message(
+            chat_id, f"{len(batch)} DM livré(s). Marquez chacun avec /envoye <id>."
+        )
+
+
+def _mark_dm_sent(chat_id: str, text: str, session: Session, telegram: Telegram) -> None:
+    from app.outreach.channels import mark_manual_sent
+
+    parts = text.split()
+    if len(parts) < 2 or not parts[1].isdigit():
+        telegram.send_message(chat_id, "Usage : /envoye <id>")
+        return
+    msg = mark_manual_sent(session, int(parts[1]))
+    if msg is None:
+        telegram.send_message(chat_id, f"DM #{parts[1]} introuvable ou déjà traité.")
+    else:
+        telegram.send_message(chat_id, f"DM #{msg.id} marqué envoyé ✅")

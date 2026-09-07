@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -532,3 +533,72 @@ def resume_mailbox(mailbox_id: int, session: SessionDep) -> dict:
     mb.active = 1
     mb.paused_reason = None
     return {"id": mb.id, "active": True}
+
+
+# --- C3 : page publique (lien SMS), DM manuels ----------------------------------------------
+
+
+@app.get("/p/{token}", response_class=HTMLResponse)
+def public_examples(token: str, session: SessionDep) -> str:
+    """Page minimale (sans jeton) : les réponses rédigées pour un prospect, liée depuis le SMS."""
+    import html
+
+    o = session.scalar(select(Outreach).where(Outreach.token == token))
+    if o is None:
+        raise HTTPException(status_code=404, detail="Lien inconnu")
+    name = html.escape(o.prospect.name)
+    blocks = []
+    for e in o.examples or []:
+        stars = "★" * int(e.get("rating") or 0)
+        blocks.append(
+            f"<section><p class=r>{stars} — {html.escape(e.get('author') or 'un client')} : "
+            f"« {html.escape(e.get('text') or '')} »</p>"
+            f"<p class=a>{html.escape(e.get('reply') or '').replace(chr(10), '<br>')}</p></section>"
+        )
+    body = "".join(blocks) or "<p>Réponses en préparation.</p>"
+    head = (
+        '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<meta name="robots" content="noindex">'
+        f"<title>Répondu — {name}</title><style>"
+        "body{font-family:system-ui,sans-serif;max-width:640px;margin:2rem auto;"
+        "padding:0 1rem;line-height:1.5}.r{color:#555}"
+        ".a{background:#f4f4f4;padding:.8rem 1rem;border-radius:8px}</style></head>"
+    )
+    return (
+        f"{head}<body><h1>Réponses rédigées pour {name}</h1>"
+        "<p>Deux réponses prêtes à publier sur votre fiche Google. "
+        "Essai gratuit 30 jours : répondez « OK » au SMS.</p>"
+        f"{body}<p><small>Répondu — vous ne souhaitez plus être contacté : "
+        "répondez STOP.</small></p></body></html>"
+    )
+
+
+class DmBatchRequest(BaseModel):
+    chat_id: str | None = None
+    limit: int | None = None
+
+
+@app.post("/outreach/dm-batch", dependencies=[AuthDep])
+def post_dm_batch(body: DmBatchRequest, session: SessionDep) -> dict:
+    from app.outreach.channels import deliver_dm_batch
+    from app.telegram.client import get_telegram
+
+    settings = get_settings()
+    chat_id = body.chat_id or settings.telegram_chat_id
+    if not chat_id:
+        raise HTTPException(status_code=422, detail="chat_id requis (ou TELEGRAM_CHAT_ID)")
+    batch = deliver_dm_batch(
+        session, get_telegram(), chat_id, body.limit or settings.outreach_dm_batch
+    )
+    return {"delivered": [m.id for m in batch]}
+
+
+@app.post("/outreach/messages/{message_id}/sent", dependencies=[AuthDep])
+def post_manual_sent(message_id: int, session: SessionDep) -> dict:
+    from app.outreach.channels import mark_manual_sent
+
+    msg = mark_manual_sent(session, message_id)
+    if msg is None:
+        raise HTTPException(status_code=404, detail="Message introuvable ou déjà traité")
+    return {"id": msg.id, "status": msg.status}

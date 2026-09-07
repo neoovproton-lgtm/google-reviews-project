@@ -154,6 +154,7 @@ class RunReport:
     skipped_quota: int = 0
     errors: int = 0
     prepared_manual: int = 0
+    expired: int = 0
     details: list[str] = field(default_factory=list)
 
 
@@ -306,7 +307,10 @@ def run_outreach(
 
 
 def _run(session, now, limit, llm, settings, report, force_window) -> None:
+    from app.outreach import channels  # enregistre les handlers formulaire / DM / SMS
+
     report.enrolled = enroll(session, now)
+    report.expired = channels.expire_stale(session, now)
     if not force_window and not is_send_window(now, settings):
         report.skipped_window = True
         return

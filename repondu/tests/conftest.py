@@ -39,6 +39,7 @@ def _env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 class _FixtureHandler(SimpleHTTPRequestHandler):
     """Sert tests/fixtures/ ; les URLs Google Maps sont mappées sur des fichiers fixes."""
 
+    last_post: str = ""
     ROUTES = {
         "/maps/search/": "maps_search.html",
         "/maps/place/": "maps_place.html",
@@ -54,6 +55,16 @@ class _FixtureHandler(SimpleHTTPRequestHandler):
 
     def log_message(self, *_args) -> None:  # silence
         pass
+
+    def do_POST(self) -> None:  # noqa: N802 - API http.server
+        length = int(self.headers.get("Content-Length") or 0)
+        body = self.rfile.read(length).decode("utf-8", "replace")
+        type(self).last_post = body
+        payload = "<html><body><h1>Merci, votre message a bien été envoyé.</h1></body></html>"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(payload.encode("utf-8"))
 
 
 @pytest.fixture(scope="session")

@@ -233,6 +233,27 @@ def mailboxes(sync: bool = SyncOpt, resume: str | None = ResumeOpt) -> None:
             )
 
 
+ChatOpt = typer.Option(None, "--chat", help="Chat Telegram (défaut TELEGRAM_CHAT_ID).")
+
+
+@app.command("dm-batch")
+def dm_batch(chat: str | None = ChatOpt, limit: int | None = LimitOpt) -> None:
+    """C3 — Livre sur Telegram le lot de DM Instagram/Facebook à envoyer à la main."""
+    _setup()
+    from app.outreach.channels import deliver_dm_batch
+    from app.telegram.client import get_telegram
+
+    settings = get_settings()
+    chat_id = chat or settings.telegram_chat_id
+    if not chat_id:
+        raise typer.BadParameter("--chat ou TELEGRAM_CHAT_ID requis")
+    with session_scope() as session:
+        batch = deliver_dm_batch(
+            session, get_telegram(), chat_id, limit or settings.outreach_dm_batch
+        )
+    typer.echo(f"{len(batch)} DM livré(s)")
+
+
 @app.command()
 def jobs() -> None:
     """État des jobs de scraping par ville."""
