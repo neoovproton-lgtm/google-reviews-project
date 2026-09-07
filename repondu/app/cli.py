@@ -45,6 +45,18 @@ def scrape(city: list[str] = CityOpt, max_jobs: int | None = MaxJobsOpt) -> None
     )
 
 
+LimitOpt = typer.Option(None, "--limit", "-n", help="Nombre max de prospects à traiter.")
+
+
+@app.command()
+def reviews(limit: int | None = LimitOpt, city: list[str] = CityOpt) -> None:
+    """A2 — Ouvre chaque fiche, lit les 30 derniers avis, calcule taux de réponse et avis/mois."""
+    _setup()
+    from app.scraping.reviews import scrape_reviews
+
+    typer.echo(scrape_reviews(limit=limit, cities=city or None))
+
+
 @app.command()
 def jobs() -> None:
     """État des jobs de scraping par ville."""
