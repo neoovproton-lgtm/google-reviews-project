@@ -1,0 +1,33 @@
+services:
+  api:
+    build: .
+    image: repondu:latest
+    container_name: repondu-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: sqlite:////srv/repondu/data/repondu.db
+      DATA_DIR: /srv/repondu/data
+      CITIES_FILE: /srv/repondu/data/cities.csv
+    volumes:
+      - ./data:/srv/repondu/data
+    ports:
+      # Exposé en local uniquement ; mettre un reverse proxy (Caddy/Nginx) devant si besoin.
+      - "127.0.0.1:8000:8000"
+    shm_size: "1g"   # Chromium a besoin de /dev/shm
+    init: true
+
+  # Exécution ponctuelle de la CLI : docker compose run --rm cli scrape --city Lyon
+  cli:
+    image: repondu:latest
+    profiles: ["cli"]
+    env_file: .env
+    environment:
+      DATABASE_URL: sqlite:////srv/repondu/data/repondu.db
+      DATA_DIR: /srv/repondu/data
+      CITIES_FILE: /srv/repondu/data/cities.csv
+    volumes:
+      - ./data:/srv/repondu/data
+    shm_size: "1g"
+    init: true
+    entrypoint: ["repondu"]
