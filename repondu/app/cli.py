@@ -166,6 +166,21 @@ def telegram_webhook(url: str = WebhookUrlOpt) -> None:
     typer.echo(result)
 
 
+EvalLimitOpt = typer.Option(10, "--limit", "-n", help="Nombre de prospects.")
+
+
+@app.command("outreach-eval")
+def outreach_eval(limit: int = EvalLimitOpt) -> None:
+    """C1 — Génère N mails de prospection pour de vrais prospects → markdown à relire."""
+    _setup()
+    from app.llm import get_llm
+    from app.outreach.evaluate import run_outreach_eval
+
+    with session_scope() as session:
+        path = run_outreach_eval(session, get_llm(), get_settings().data_dir / "exports", limit)
+    typer.echo(f"Relecture : {path}")
+
+
 @app.command()
 def jobs() -> None:
     """État des jobs de scraping par ville."""

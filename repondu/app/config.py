@@ -63,6 +63,24 @@ class Settings(BaseSettings):
     telegram_chat_id: str | None = None  # si défini : seul ce chat peut piloter le bot
     telegram_webhook_secret: str | None = None  # header X-Telegram-Bot-Api-Secret-Token
 
+    # Prospection (Phase C)
+    mailboxes_file: Path = ROOT_DIR / "data" / "mailboxes.json"
+    resend_api_key: str | None = None
+    brevo_api_key: str | None = None
+    outreach_send_hours: str = "9-18"  # heure de Paris, jours ouvrés
+    outreach_timezone: str = "Europe/Paris"
+    outreach_followup_days: int = 3  # J+3
+    outreach_last_days: int = 5  # puis J+8
+    outreach_dm_batch: int = 30
+    outreach_max_bounce_rate: float = 0.03
+    outreach_min_sent_for_rate: int = 20
+    outreach_price_text: str = "39 €/mois après l'essai, rien pendant les 30 jours"
+    outreach_sender_name: str = "Répondu"
+    outreach_signature: str = "Neo, Répondu"
+    outreach_reply_address: str = "contact@repondu.example"  # adresse de retour (formulaires)
+    public_base_url: str = "http://127.0.0.1:8000"  # pour les liens /p/{token} (SMS)
+    sms_sender: str = "Repondu"  # ≤ 11 caractères alphanumériques
+
     log_level: str = Field(default="INFO")
 
     @property
