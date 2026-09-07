@@ -3,6 +3,8 @@
 Réponse automatique aux avis Google pour restaurants. Phase A (qualification des prospects)
 livrée : scraping Maps → avis → scoring → enrichissement contact. Produit : `docs/PRD.md`.
 Guide agents : `CLAUDE.md`. Issues : `docs/issues/`. Handoffs : `docs/handoff/`.
+Intégration OpenClaw : `docs/OPENCLAW.md` (contrat d'API, cadences, garde-fous) et
+`docs/openapi.json`. Mise en service humaine : `docs/RUNBOOK.md`.
 
 ## Déploiement sur le VPS (Docker)
 
