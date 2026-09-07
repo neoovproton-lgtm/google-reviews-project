@@ -14,5 +14,5 @@ Ordre : A1 → A2 → A3 → A4. Chaque issue se termine par `docs/handoff/<issu
 | Issue | Titre | Branche | Statut |
 |---|---|---|---|
 | [B1](B1-reply-prompt.md) | Prompt de rédaction (Sonnet), vérifications, éval 30 avis | `feat/B1-reply-prompt` | fait |
-| [B2](B2-safety-filter.md) | Filtre de sécurité → validation humaine | `feat/B2-safety-filter` | à faire |
+| [B2](B2-safety-filter.md) | Filtre de sécurité → validation humaine | `feat/B2-safety-filter` | fait |
 | [B3](B3-establishment-profile.md) | Profil établissement, onboarding Telegram, veto/validation | `feat/B3-establishment-profile` | à faire |

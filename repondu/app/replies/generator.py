@@ -17,6 +17,7 @@ from app.replies.prompt import (
     build_reviewer_message,
     build_user_message,
 )
+from app.replies.safety import safety_flags
 
 log = logging.getLogger(__name__)
 MAX_ATTEMPTS = 2
@@ -46,6 +47,8 @@ def generate_reply(
     - Vérifications en code après chaque tentative (`checks.check_reply`).
     - Pour les avis ≤ 2★ : relecture par un second appel (PRD §5), ses remarques servent de
       retour pour la régénération.
+    - Filtre de sécurité (B2) : hygiène, intoxication, discrimination, menace juridique →
+      `needs_human` quoi qu'il arrive, jamais de publication automatique.
     """
     llm = llm or get_llm()
     best: GeneratedReply | None = None
@@ -79,5 +82,6 @@ def generate_reply(
         feedback = issues
     assert best is not None
     best.attempts = attempt
-    best.needs_human = bool(best.issues)
+    best.safety_flags = safety_flags(review.text)
+    best.needs_human = bool(best.issues) or bool(best.safety_flags)
     return best
