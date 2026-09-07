@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -116,4 +116,76 @@ class ScrapeJob(Base):
     places_new: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+# --- Phase B ---------------------------------------------------------------------------------
+
+
+class Establishment(Base):
+    """Client (restaurant en essai). Profil utilisé par le moteur de réponse (B3)."""
+
+    __tablename__ = "establishments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    prospect_id: Mapped[int | None] = mapped_column(ForeignKey("prospects.id"), index=True)
+    name: Mapped[str] = mapped_column(String(255))
+    cuisine_type: Mapped[str | None] = mapped_column(String(128))
+    tone: Mapped[str] = mapped_column(String(64), default="chaleureux et professionnel")
+    signature: Mapped[str | None] = mapped_column(String(255))
+    manager_first_name: Mapped[str | None] = mapped_column(String(128))
+    never_say: Mapped[str | None] = mapped_column(Text)
+    use_tutoiement: Mapped[int] = mapped_column(Integer, default=0)
+    auto_publish_delay_h: Mapped[int] = mapped_column(Integer, default=24)
+    telegram_chat_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    contact_email: Mapped[str | None] = mapped_column(String(255))
+    active: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+    replies: Mapped[list[Reply]] = relationship(back_populates="establishment")
+
+
+class ReplyStatus:
+    PENDING = "pending"  # en attente de validation / veto
+    APPROVED = "approved"  # validé (humain ou délai écoulé sans veto)
+    REJECTED = "rejected"
+    PUBLISHED = "published"
+    ALL = (PENDING, APPROVED, REJECTED, PUBLISHED)
+
+
+class Reply(Base):
+    """Brouillon de réponse à un avis (B1), avec drapeaux de sécurité (B2)."""
+
+    __tablename__ = "replies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    review_id: Mapped[int] = mapped_column(ForeignKey("reviews.id", ondelete="CASCADE"), index=True)
+    establishment_id: Mapped[int] = mapped_column(ForeignKey("establishments.id"), index=True)
+    text: Mapped[str] = mapped_column(Text)
+    detail_reused: Mapped[str | None] = mapped_column(String(255))
+    word_count: Mapped[int] = mapped_column(Integer, default=0)
+    needs_human: Mapped[int] = mapped_column(Integer, default=0)
+    safety_flags: Mapped[list | None] = mapped_column(JSON)
+    check_issues: Mapped[list | None] = mapped_column(JSON)
+    model: Mapped[str | None] = mapped_column(String(64))
+    attempts: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(16), default=ReplyStatus.PENDING, index=True)
+    decision_by: Mapped[str | None] = mapped_column(String(64))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    establishment: Mapped[Establishment] = relationship(back_populates="replies")
+    review: Mapped[Review] = relationship()
+
+
+class TelegramSession(Base):
+    """État du formulaire d'onboarding par conversation Telegram (B3)."""
+
+    __tablename__ = "telegram_sessions"
+
+    chat_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    state: Mapped[str | None] = mapped_column(String(64))
+    answers: Mapped[dict | None] = mapped_column(JSON)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)

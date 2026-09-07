@@ -93,6 +93,28 @@ def enrich(limit: int | None = LimitOpt, retry_errors: bool = RetryOpt) -> None:
     typer.echo(enrich_all(limit=limit, retry_errors=retry_errors))
 
 
+ReviewsFileOpt = typer.Option(None, "--reviews", help="Fichier JSON d'avis test.")
+
+
+@app.command("eval-replies")
+def eval_replies(reviews: str | None = ReviewsFileOpt) -> None:
+    """B1 — Génère les réponses aux 30 avis test et écrit un markdown à relire (clé API requise)."""
+    _setup()
+    from pathlib import Path
+
+    from app.llm import get_llm
+    from app.replies.evaluate import run_evaluation
+
+    settings = get_settings()
+    src = (
+        Path(reviews)
+        if reviews
+        else Path(__file__).resolve().parent.parent / "data/eval/reviews_test.json"
+    )
+    path = run_evaluation(src, settings.data_dir / "exports", get_llm())
+    typer.echo(f"Relecture : {path}")
+
+
 @app.command()
 def jobs() -> None:
     """État des jobs de scraping par ville."""

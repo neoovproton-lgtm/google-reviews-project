@@ -1,0 +1,182 @@
+[
+  {
+    "id": 1,
+    "rating": 5,
+    "author": "Marie L.",
+    "text": "Un régal du début à la fin ! Le risotto aux cèpes était crémeux à souhait et le serveur, Julien, adorable. On reviendra."
+  },
+  {
+    "id": 2,
+    "rating": 5,
+    "author": "Thomas B.",
+    "text": "Meilleure pizza de Lyon, pâte fine et bien cuite, la burrata fondante. Service rapide malgré la salle pleine un samedi soir."
+  },
+  {
+    "id": 3,
+    "rating": 5,
+    "author": "Inès K.",
+    "text": "Anniversaire de ma mère fêté ici, l'équipe a apporté une bougie sur le fondant au chocolat sans qu'on demande rien. Merci !"
+  },
+  {
+    "id": 4,
+    "rating": 5,
+    "author": "Karim D.",
+    "text": "Terrasse au calme, tartare coupé au couteau, frites maison. Rapport qualité prix imbattable dans le quartier."
+  },
+  {
+    "id": 5,
+    "rating": 5,
+    "author": "Sophie M.",
+    "text": "Très bon brunch, les œufs bénédicte parfaits. Petit bémol sur l'attente pour le café mais rien de grave."
+  },
+  {
+    "id": 6,
+    "rating": 5,
+    "author": "Lucas P.",
+    "text": ""
+  },
+  {
+    "id": 7,
+    "rating": 5,
+    "author": "Chloé R.",
+    "text": "Top."
+  },
+  {
+    "id": 8,
+    "rating": 5,
+    "author": "Antoine V.",
+    "text": "Le chef est venu nous parler du menu, produits locaux, dessert à la rhubarbe incroyable. Une belle adresse."
+  },
+  {
+    "id": 9,
+    "rating": 4,
+    "author": "Nadia H.",
+    "text": "Bonne cuisine, le magret était parfaitement cuit. Un peu bruyant en salle le vendredi, mais on a passé un bon moment."
+  },
+  {
+    "id": 10,
+    "rating": 4,
+    "author": "Julien F.",
+    "text": "Très bons ramens, bouillon riche. Dommage que les gyozas soient arrivés froids. Le personnel s'est excusé tout de suite."
+  },
+  {
+    "id": 11,
+    "rating": 4,
+    "author": "Émilie S.",
+    "text": "Jolie déco, cocktails originaux, le ceviche frais. Les portions sont un peu petites pour le prix."
+  },
+  {
+    "id": 12,
+    "rating": 4,
+    "author": "Paul G.",
+    "text": "Bon couscous royal, semoule légère. 20 minutes d'attente pour la table réservée, sinon parfait."
+  },
+  {
+    "id": 13,
+    "rating": 4,
+    "author": "Camille T.",
+    "text": "Carte courte mais tout est fait maison. La tarte au citron est excellente. Vin au verre un peu cher."
+  },
+  {
+    "id": 14,
+    "rating": 4,
+    "author": "Hugo N.",
+    "text": "Correct, bon accueil, bavette tendre. Rien d'exceptionnel mais on y retourne volontiers."
+  },
+  {
+    "id": 15,
+    "rating": 3,
+    "author": "Léa M.",
+    "text": "Cuisine correcte mais service très lent, 45 minutes entre l'entrée et le plat. Le tiramisu a sauvé la soirée."
+  },
+  {
+    "id": 16,
+    "rating": 3,
+    "author": "Mehdi A.",
+    "text": "Le burger était bon mais les frites molles et la salade sans assaisonnement. Prix un peu élevé pour ça."
+  },
+  {
+    "id": 17,
+    "rating": 3,
+    "author": "Anaïs C.",
+    "text": "Moyen. La pièce de bœuf demandée saignante est arrivée à point. Le serveur l'a reprise sans discuter, c'est apprécié."
+  },
+  {
+    "id": 18,
+    "rating": 3,
+    "author": "Romain L.",
+    "text": "Ambiance sympa mais trop de bruit, on ne s'entendait pas. Les plats étaient bien présentés, sans plus."
+  },
+  {
+    "id": 19,
+    "rating": 3,
+    "author": "Fatou D.",
+    "text": "Réservation par téléphone perdue, on a attendu au bar 30 minutes. Une fois assis, bon repas, le poulet yassa très bon."
+  },
+  {
+    "id": 20,
+    "rating": 3,
+    "author": "Nicolas B.",
+    "text": "Carte des vins intéressante, mais le poisson du jour manquait de cuisson. Le sommelier était de bon conseil."
+  },
+  {
+    "id": 21,
+    "rating": 2,
+    "author": "Sarah P.",
+    "text": "Déçue. Plat tiède, pain rassis, et le serveur a soupiré quand on a demandé de l'eau. On avait réservé pour un anniversaire."
+  },
+  {
+    "id": 22,
+    "rating": 2,
+    "author": "Olivier M.",
+    "text": "Attente d'une heure pour le plat, personne ne nous a prévenus. L'entrecôte était correcte mais on n'y retournera pas."
+  },
+  {
+    "id": 23,
+    "rating": 2,
+    "author": "Manon R.",
+    "text": "Addition erronée, deux desserts facturés au lieu d'un. Corrigé, mais l'ambiance était tendue. Les pâtes étaient bonnes."
+  },
+  {
+    "id": 24,
+    "rating": 2,
+    "author": "Yanis K.",
+    "text": "Musique beaucoup trop forte, impossible de discuter. Le tajine manquait de sel. Le serveur était aimable."
+  },
+  {
+    "id": 25,
+    "rating": 2,
+    "author": "Clara D.",
+    "text": "Vous nous avez placés à côté des toilettes alors que la salle était à moitié vide. Dommage, la soupe de poisson était réussie."
+  },
+  {
+    "id": 26,
+    "rating": 1,
+    "author": "Bruno S.",
+    "text": "Réservation non honorée, on nous a dit qu'il n'y avait aucune trace. Aucune solution proposée. Inadmissible pour un vendredi soir."
+  },
+  {
+    "id": 27,
+    "rating": 1,
+    "author": "Jade L.",
+    "text": "Le pire service de ma vie. Serveuse désagréable, plats arrivés dans le désordre, un dessert oublié. Plus jamais."
+  },
+  {
+    "id": 28,
+    "rating": 1,
+    "author": "Marc E.",
+    "text": "Trop cher pour ce que c'est. 32 € pour un plat de pâtes fades. La déco ne fait pas tout."
+  },
+  {
+    "id": 29,
+    "rating": 1,
+    "author": "Aurélie V.",
+    "text": "Nous sommes partis avant le plat après 1h10 d'attente. Aucune excuse de la part du personnel."
+  },
+  {
+    "id": 30,
+    "rating": 1,
+    "author": "Kévin T.",
+    "text": "Nul"
+  }
+]
