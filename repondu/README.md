@@ -62,6 +62,13 @@ est défini.
 | `POST /reviews/auto-approve` | Approuve les brouillons dont le délai de veto (24 h) est écoulé. |
 | `GET /replies?status=approved` | File des réponses à publier (semi-manuel). |
 | `POST /telegram/webhook` | Webhook du bot (secret `TELEGRAM_WEBHOOK_SECRET`). |
+| `POST /outreach/run` `{"limit":N,"force_window":false}` | Enrôle et envoie les étapes dues (job en arrière-plan). |
+| `GET /outreach?status=&channel=`, `GET /outreach/{id}` | Séquences de prospection (avec messages). |
+| `POST /outreach/{id}/outcome` `{"outcome":"yes\|objection\|replied\|opted_out\|no\|stopped"}` | Qualification d'une réponse. |
+| `POST /outreach/dm-batch`, `POST /outreach/messages/{id}/sent` | Lot de DM vers Telegram, marquage envoyé. |
+| `GET /mailboxes`, `POST /mailboxes/sync`, `POST /mailboxes/{id}/resume` | Boîtes d'envoi (santé, quota, réactivation). |
+| `POST /webhooks/resend`, `POST /webhooks/brevo?token=` | Événements fournisseur (délivré, bounce, plainte, ouverture). |
+| `GET /p/{token}` | Page publique des réponses rédigées (lien des SMS). |
 
 ```bash
 curl -H "Authorization: Bearer $API_TOKEN" -X POST localhost:8000/scrape \
@@ -81,6 +88,23 @@ docker compose run --rm cli telegram-webhook --url https://<domaine>/telegram/we
 docker compose run --rm cli draft -e 1            # brouillons + notification Telegram
 docker compose run --rm cli auto-approve          # à planifier toutes les heures (cron)
 ```
+
+### Phase C — prospection
+
+```bash
+cp data/mailboxes.example.json data/mailboxes.json   # boîtes, quotas, IMAP (jamais commité)
+docker compose run --rm cli mailboxes --sync
+docker compose run --rm cli outreach-eval --limit 10  # 10 mails à relire avant tout envoi
+docker compose run --rm cli outreach-run              # ou laisser le service `scheduler` (horaire)
+docker compose run --rm cli inbox-poll                # réponses : OK → oui, STOP → opt-out
+docker compose run --rm cli funnel                    # entonnoir (idem /stats Telegram)
+docker compose run --rm cli mailboxes                 # santé, bounces, boîtes coupées
+```
+
+Le service `scheduler` enchaîne chaque heure : relève IMAP → prospection (jours ouvrés,
+`OUTREACH_SEND_HOURS`, quotas 20 → 30 /jour/boîte) → approbation des brouillons au veto écoulé.
+Webhooks fournisseur à déclarer : `https://<domaine>/webhooks/resend` (secret Svix dans
+`RESEND_WEBHOOK_SECRET`) et `https://<domaine>/webhooks/brevo?token=<BREVO_WEBHOOK_TOKEN>`.
 
 ### Exploitation
 

@@ -57,7 +57,10 @@ def compute_stats(session: Session) -> dict:
 
     mailboxes = [mailbox_health(session, mb) for mb in session.scalars(select(Mailbox))]
 
+    from app.outreach.stats import funnel
+
     return {
+        "outreach": funnel(session),
         "mailboxes": mailboxes,
         "prospects": prospects,
         "prospects_by_city": {c or "?": int(n) for c, n in by_city},

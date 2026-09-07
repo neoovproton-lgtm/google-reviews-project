@@ -9,6 +9,7 @@ services:
       DATABASE_URL: sqlite:////srv/repondu/data/repondu.db
       DATA_DIR: /srv/repondu/data
       CITIES_FILE: /srv/repondu/data/cities.csv
+      MAILBOXES_FILE: /srv/repondu/data/mailboxes.json
     volumes:
       - ./data:/srv/repondu/data
     ports:
@@ -16,6 +17,24 @@ services:
       - "127.0.0.1:8000:8000"
     shm_size: "1g"   # Chromium a besoin de /dev/shm
     init: true
+
+  # Tâches récurrentes (toutes les heures) : relève IMAP, prospection, veto écoulé
+  scheduler:
+    image: repondu:latest
+    container_name: repondu-scheduler
+    restart: unless-stopped
+    depends_on: [api]
+    env_file: .env
+    environment:
+      DATABASE_URL: sqlite:////srv/repondu/data/repondu.db
+      DATA_DIR: /srv/repondu/data
+      CITIES_FILE: /srv/repondu/data/cities.csv
+      MAILBOXES_FILE: /srv/repondu/data/mailboxes.json
+    volumes:
+      - ./data:/srv/repondu/data
+    shm_size: "1g"
+    init: true
+    command: ["repondu", "scheduler"]
 
   # Exécution ponctuelle de la CLI : docker compose run --rm cli scrape --city Lyon
   cli:
@@ -26,6 +45,7 @@ services:
       DATABASE_URL: sqlite:////srv/repondu/data/repondu.db
       DATA_DIR: /srv/repondu/data
       CITIES_FILE: /srv/repondu/data/cities.csv
+      MAILBOXES_FILE: /srv/repondu/data/mailboxes.json
     volumes:
       - ./data:/srv/repondu/data
     shm_size: "1g"

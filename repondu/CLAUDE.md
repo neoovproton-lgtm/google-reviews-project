@@ -28,7 +28,12 @@ repondu/
     llm.py        client Claude Sonnet (messages.parse, sortie structurée) ; set_llm() en tests
     replies/      prompt.py (règles), checks.py (vérifs pures), safety.py (B2), generator.py,
                   service.py (brouillons en base, veto/validation), evaluate.py (30 avis test)
-    telegram/     client.py (Bot API, NullTelegram sans jeton), bot.py (onboarding, boutons)
+    telegram/     client.py (Bot API, NullTelegram sans jeton), bot.py (onboarding, boutons,
+                  /dm, /envoye, /stats, /oui, /objection)
+    outreach/     compose.py (C1), sequence.py (C2 : machine à états), mailboxes.py, 
+                  email_providers.py (Resend/Brevo/Log), channels.py + forms.py + sms.py (C3),
+                  events.py (C5 : webhooks), inbox.py (C4 : IMAP), stats.py (entonnoir)
+    scheduler.py  boucle horaire (service docker `scheduler`)
   tests/          pytest ; fixtures HTML dans tests/fixtures/
   data/           cities.csv, base SQLite, exports (ignorés par git sauf cities.csv)
   docs/PRD.md     produit
@@ -69,6 +74,11 @@ docker compose up -d --build   # déploiement VPS
   `needs_human` (filtre B2 ou vérifications B1 en échec) n'est jamais approuvé automatiquement.
 - LLM : toujours via `app/llm.py` (`get_llm()`), jamais d'appel direct au SDK ailleurs. Tests
   avec `tests/fakes.py::FakeLLM` ; aucun test ne doit appeler l'API réelle.
+- Prospection : une séquence par prospect (`outreach.prospect_id` unique), un message par
+  (séquence, étape), jamais renvoyé s'il est `sent`. Fournisseurs (email, SMS, Telegram)
+  toujours injectables (`set_provider`, `set_sms`, `set_telegram`) ; tests avec les faux de
+  `tests/fakes.py`. Opt-out : registre `optouts`, vérifié à l'enrôlement et avant chaque envoi.
+- Secrets IMAP dans `data/mailboxes.json` (volume, jamais commité), jamais en base.
 - Français partout dans les docs, les messages et les données ; identifiants de code en anglais.
 - Tests : pytest, pas de réseau externe. Les tests navigateur servent des fixtures HTML via un
   serveur local et sont marqués `@pytest.mark.browser`.

@@ -254,6 +254,48 @@ def dm_batch(chat: str | None = ChatOpt, limit: int | None = LimitOpt) -> None:
     typer.echo(f"{len(batch)} DM livré(s)")
 
 
+@app.command("inbox-poll")
+def inbox_poll() -> None:
+    """C4 — Relève IMAP des boîtes d'envoi : OK → oui, STOP → opt-out, sinon réponse à qualifier."""
+    _setup()
+    from app.outreach.inbox import poll_inboxes
+    from app.outreach.mailboxes import load_mailboxes_file, sync_mailboxes
+    from app.telegram.client import get_telegram
+
+    settings = get_settings()
+    entries = load_mailboxes_file(settings.mailboxes_file)
+    with session_scope() as session:
+        sync_mailboxes(session, entries)
+        typer.echo(poll_inboxes(session, entries, get_telegram(), settings.telegram_chat_id))
+
+
+@app.command()
+def funnel() -> None:
+    """C4 — Entonnoir de prospection (texte identique à /stats Telegram)."""
+    _setup()
+    from sqlalchemy import select
+
+    from app.models import Mailbox
+    from app.outreach.mailboxes import mailbox_health
+    from app.outreach.stats import format_funnel
+    from app.outreach.stats import funnel as _funnel
+
+    with session_scope() as session:
+        boxes = [mailbox_health(session, mb) for mb in session.scalars(select(Mailbox))]
+        typer.echo(format_funnel(_funnel(session), boxes))
+
+
+IntervalOpt = typer.Option(3600, "--interval", help="Secondes entre deux passages.")
+
+
+@app.command()
+def scheduler(interval: int = IntervalOpt) -> None:
+    """Boucle horaire : relève IMAP, prospection, approbation automatique des brouillons."""
+    from app.scheduler import main
+
+    main(interval)
+
+
 @app.command()
 def jobs() -> None:
     """État des jobs de scraping par ville."""

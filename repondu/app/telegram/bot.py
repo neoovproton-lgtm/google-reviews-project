@@ -37,6 +37,8 @@ HELP = (
     "/annuler — abandonner le formulaire en cours\n"
     "/dm — recevoir le lot du jour de DM Instagram/Facebook à envoyer\n"
     "/envoye <id> — marquer un DM comme envoyé\n"
+    "/stats — entonnoir de prospection et santé des boîtes\n"
+    "/oui <séquence> · /objection <séquence> <note> · /non <séquence> · /stop <séquence>\n"
     "Les réponses proposées arrivent ici avec les boutons Approuver / Refuser."
 )
 
@@ -84,6 +86,10 @@ def _handle_message(message: dict, session: Session, telegram: Telegram) -> None
         _deliver_dms(chat_id, session, telegram)
     elif command == "/envoye":
         _mark_dm_sent(chat_id, text, session, telegram)
+    elif command == "/stats":
+        _send_stats(chat_id, session, telegram)
+    elif command in ("/oui", "/objection", "/non", "/stop"):
+        _outcome_command(chat_id, command, text, session, telegram)
     elif state and state.state:
         _answer_step(chat_id, text, session, telegram, state)
     else:
@@ -221,3 +227,32 @@ def _mark_dm_sent(chat_id: str, text: str, session: Session, telegram: Telegram)
         telegram.send_message(chat_id, f"DM #{parts[1]} introuvable ou déjà traité.")
     else:
         telegram.send_message(chat_id, f"DM #{msg.id} marqué envoyé ✅")
+
+
+def _send_stats(chat_id: str, session: Session, telegram: Telegram) -> None:
+    from app.models import Mailbox
+    from app.outreach.mailboxes import mailbox_health
+    from app.outreach.stats import format_funnel, funnel
+
+    boxes = [mailbox_health(session, mb) for mb in session.scalars(select(Mailbox))]
+    telegram.send_message(chat_id, format_funnel(funnel(session), boxes))
+
+
+def _outcome_command(
+    chat_id: str, command: str, text: str, session: Session, telegram: Telegram
+) -> None:
+    from app.models import Outreach
+    from app.outreach.sequence import record_outcome
+
+    parts = text.split(maxsplit=2)
+    if len(parts) < 2 or not parts[1].isdigit():
+        telegram.send_message(chat_id, f"Usage : {command} <séquence> [note]")
+        return
+    o = session.get(Outreach, int(parts[1]))
+    if o is None:
+        telegram.send_message(chat_id, f"Séquence #{parts[1]} introuvable.")
+        return
+    outcome = {"/oui": "yes", "/objection": "objection", "/non": "no", "/stop": "stopped"}[command]
+    note = parts[2] if len(parts) > 2 else None
+    record_outcome(session, o, outcome, note=note, source="telegram")
+    telegram.send_message(chat_id, f"Séquence #{o.id} ({o.prospect.name}) → {o.status}.")

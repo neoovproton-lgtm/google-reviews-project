@@ -134,7 +134,9 @@ def test_no_cutoff_below_minimum_or_threshold(db):
             "resend",
         )
         assert mb.active == 1  # 10 envois < 20 : pas de décision
-        mb2 = Mailbox(address="b@repondu.fr", sent_total=100, bounced_total=2, complained_total=0, active=1)
+        mb2 = Mailbox(
+            address="b@repondu.fr", sent_total=100, bounced_total=2, complained_total=0, active=1
+        )
         assert check_health(mb2) is None and mb2.active == 1  # 2 % ≤ 3 %
 
 
