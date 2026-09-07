@@ -16,7 +16,18 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import get_session, init_db
-from app.models import Establishment, Prospect, ProspectStatus, Reply, ReplyStatus, Review, utcnow
+from app.models import (
+    Establishment,
+    Mailbox,
+    Outreach,
+    OutreachStatus,
+    Prospect,
+    ProspectStatus,
+    Reply,
+    ReplyStatus,
+    Review,
+    utcnow,
+)
 
 log = logging.getLogger(__name__)
 
@@ -357,3 +368,167 @@ def telegram_webhook(
         raise HTTPException(status_code=401, detail="Secret invalide")
     handle_update(update, session, get_telegram())
     return {"ok": True}
+
+
+# --- Phase C : prospection --------------------------------------------------------------------
+
+
+class OutreachRunRequest(BaseModel):
+    limit: int | None = None
+    force_window: bool = False
+
+
+@app.post("/outreach/run", dependencies=[AuthDep], status_code=202)
+def post_outreach_run(req: OutreachRunRequest) -> JobState:
+    from app.outreach.sequence import run_outreach
+
+    with _job_lock:
+        if _running.is_set():
+            raise HTTPException(status_code=409, detail="Un job est déjà en cours")
+        _running.set()
+        job = JobState(id=uuid.uuid4().hex[:12], mode="outreach")
+        _jobs[job.id] = job
+
+    def work():
+        r = run_outreach(limit=req.limit, force_window=req.force_window)
+        return {
+            "enrolled": r.enrolled,
+            "sent": r.sent,
+            "prepared_manual": r.prepared_manual,
+            "skipped_window": r.skipped_window,
+            "skipped_quota": r.skipped_quota,
+            "errors": r.errors,
+            "details": r.details[:50],
+        }
+
+    _run_in_thread(job, work)
+    return job
+
+
+class OutreachMessageOut(BaseModel):
+    id: int
+    step: int
+    channel: str
+    subject: str | None
+    body: str
+    status: str
+    mailbox_id: int | None
+    provider_message_id: str | None
+    check_issues: list | None
+    sent_at: datetime | None
+    delivered_at: datetime | None
+    opened_at: datetime | None
+    bounced_at: datetime | None
+    model_config = {"from_attributes": True}
+
+
+class OutreachOut(BaseModel):
+    id: int
+    prospect_id: int
+    prospect_name: str
+    channel: str
+    contact: str | None
+    status: str
+    step: int
+    next_action_at: datetime | None
+    mailbox_id: int | None
+    token: str | None
+    outcome_note: str | None
+    started_at: datetime | None
+    last_sent_at: datetime | None
+    replied_at: datetime | None
+    messages: list[OutreachMessageOut] = []
+
+    @classmethod
+    def from_outreach(cls, o: Outreach, with_messages: bool = False) -> OutreachOut:
+        return cls(
+            id=o.id,
+            prospect_id=o.prospect_id,
+            prospect_name=o.prospect.name,
+            channel=o.channel,
+            contact=o.contact,
+            status=o.status,
+            step=o.step,
+            next_action_at=o.next_action_at,
+            mailbox_id=o.mailbox_id,
+            token=o.token,
+            outcome_note=o.outcome_note,
+            started_at=o.started_at,
+            last_sent_at=o.last_sent_at,
+            replied_at=o.replied_at,
+            messages=[OutreachMessageOut.model_validate(m) for m in o.messages]
+            if with_messages
+            else [],
+        )
+
+
+@app.get("/outreach", dependencies=[AuthDep])
+def list_outreach(
+    session: SessionDep,
+    status: str | None = None,
+    channel: str | None = None,
+    limit: int = Query(default=100, le=1000),
+) -> list[OutreachOut]:
+    if status and status not in OutreachStatus.ALL:
+        raise HTTPException(status_code=422, detail=f"status doit être parmi {OutreachStatus.ALL}")
+    stmt = select(Outreach)
+    if status:
+        stmt = stmt.where(Outreach.status == status)
+    if channel:
+        stmt = stmt.where(Outreach.channel == channel)
+    return [
+        OutreachOut.from_outreach(o)
+        for o in session.scalars(stmt.order_by(Outreach.id).limit(limit))
+    ]
+
+
+@app.get("/outreach/{outreach_id}", dependencies=[AuthDep])
+def get_outreach(outreach_id: int, session: SessionDep) -> OutreachOut:
+    o = session.get(Outreach, outreach_id)
+    if o is None:
+        raise HTTPException(status_code=404, detail="Séquence inconnue")
+    return OutreachOut.from_outreach(o, with_messages=True)
+
+
+class OutcomeIn(BaseModel):
+    outcome: Literal["replied", "yes", "objection", "opted_out", "no", "stopped"]
+    note: str | None = None
+
+
+@app.post("/outreach/{outreach_id}/outcome", dependencies=[AuthDep])
+def post_outcome(outreach_id: int, body: OutcomeIn, session: SessionDep) -> OutreachOut:
+    from app.outreach.sequence import record_outcome
+
+    o = session.get(Outreach, outreach_id)
+    if o is None:
+        raise HTTPException(status_code=404, detail="Séquence inconnue")
+    record_outcome(session, o, body.outcome, note=body.note, source="api")
+    session.flush()
+    return OutreachOut.from_outreach(o)
+
+
+@app.get("/mailboxes", dependencies=[AuthDep])
+def list_mailboxes(session: SessionDep) -> list[dict]:
+    from app.outreach.mailboxes import mailbox_health
+
+    return [
+        mailbox_health(session, mb) for mb in session.scalars(select(Mailbox).order_by(Mailbox.id))
+    ]
+
+
+@app.post("/mailboxes/sync", dependencies=[AuthDep])
+def sync_mailboxes_endpoint(session: SessionDep) -> dict:
+    from app.outreach.mailboxes import load_mailboxes_file, sync_mailboxes
+
+    entries = load_mailboxes_file(get_settings().mailboxes_file)
+    return {"created": sync_mailboxes(session, entries), "total": len(entries)}
+
+
+@app.post("/mailboxes/{mailbox_id}/resume", dependencies=[AuthDep])
+def resume_mailbox(mailbox_id: int, session: SessionDep) -> dict:
+    mb = session.get(Mailbox, mailbox_id)
+    if mb is None:
+        raise HTTPException(status_code=404, detail="Boîte inconnue")
+    mb.active = 1
+    mb.paused_reason = None
+    return {"id": mb.id, "active": True}

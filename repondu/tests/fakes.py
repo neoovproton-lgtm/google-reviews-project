@@ -47,3 +47,24 @@ class FakeTelegram:
     @property
     def texts(self) -> list[str]:
         return [m["text"] for m in self.messages]
+
+
+class FakeEmailProvider:
+    """Capture les envois ; `fail_next` fait échouer le prochain envoi."""
+
+    name = "fake"
+
+    def __init__(self):
+        self.sent: list[Any] = []
+        self.fail_next = False
+        self._n = 0
+
+    def send(self, email) -> str:
+        from app.outreach.email_providers import SendError
+
+        if self.fail_next:
+            self.fail_next = False
+            raise SendError("panne simulée")
+        self._n += 1
+        self.sent.append(email)
+        return f"fake-{self._n}"

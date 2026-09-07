@@ -181,6 +181,58 @@ def outreach_eval(limit: int = EvalLimitOpt) -> None:
     typer.echo(f"Relecture : {path}")
 
 
+ForceWindowOpt = typer.Option(
+    False, "--force-window", help="Ignore la fenêtre jours ouvrés/heures."
+)
+
+
+@app.command("outreach-run")
+def outreach_run(limit: int | None = LimitOpt, force_window: bool = ForceWindowOpt) -> None:
+    """C2 — Enrôle les prospects enrichis et envoie les étapes dues (J0, J+3, J+8)."""
+    _setup()
+    from app.outreach.sequence import run_outreach
+
+    r = run_outreach(limit=limit, force_window=force_window)
+    typer.echo(
+        f"Enrôlés {r.enrolled} · envoyés {r.sent} · préparés (manuel) {r.prepared_manual} · "
+        f"hors fenêtre {r.skipped_window} · sans quota {r.skipped_quota} · erreurs {r.errors}"
+    )
+    for d in r.details[:30]:
+        typer.echo("  " + d)
+
+
+SyncOpt = typer.Option(False, "--sync", help="Charge data/mailboxes.json en base.")
+ResumeOpt = typer.Option(None, "--resume", help="Réactive la boîte (adresse).")
+
+
+@app.command()
+def mailboxes(sync: bool = SyncOpt, resume: str | None = ResumeOpt) -> None:
+    """C2/C5 — État des boîtes d'envoi (quota du jour, bounces, statut)."""
+    _setup()
+    from sqlalchemy import select
+
+    from app.models import Mailbox
+    from app.outreach.mailboxes import load_mailboxes_file, mailbox_health, sync_mailboxes
+
+    with session_scope() as session:
+        if sync:
+            n = sync_mailboxes(session, load_mailboxes_file(get_settings().mailboxes_file))
+            typer.echo(f"{n} boîte(s) créée(s)")
+        if resume:
+            mb = session.scalar(select(Mailbox).where(Mailbox.address == resume.lower()))
+            if mb is None:
+                raise typer.BadParameter("boîte inconnue")
+            mb.active, mb.paused_reason = 1, None
+            typer.echo(f"{mb.address} réactivée")
+        for mb in session.scalars(select(Mailbox).order_by(Mailbox.id)):
+            h = mailbox_health(session, mb)
+            state = "actif" if h["active"] else f"COUPÉE ({h['paused_reason']})"
+            typer.echo(
+                f"{h['address']:35s} {h['provider']:7s} {h['sent_today']}/{h['quota_today']} "
+                f"aujourd'hui · total {h['sent_total']} · bounce {h['bounce_rate']} · {state}"
+            )
+
+
 @app.command()
 def jobs() -> None:
     """État des jobs de scraping par ville."""
