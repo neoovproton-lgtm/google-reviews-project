@@ -1,0 +1,89 @@
+import pytest
+
+from app.enrichment.channel import choose_channel
+
+
+@pytest.mark.parametrize(
+    "kwargs,expected",
+    [
+        (
+            dict(
+                email="a@b.fr",
+                contact_form_url="u",
+                instagram="i",
+                facebook="f",
+                mobile_phone="m",
+                phone="p",
+            ),
+            "email",
+        ),
+        (
+            dict(
+                email=None,
+                contact_form_url="u",
+                instagram="i",
+                facebook="f",
+                mobile_phone="m",
+                phone="p",
+            ),
+            "formulaire",
+        ),
+        (
+            dict(
+                email=None,
+                contact_form_url=None,
+                instagram="i",
+                facebook="f",
+                mobile_phone="m",
+                phone="p",
+            ),
+            "instagram",
+        ),
+        (
+            dict(
+                email=None,
+                contact_form_url=None,
+                instagram=None,
+                facebook="f",
+                mobile_phone="m",
+                phone="p",
+            ),
+            "facebook",
+        ),
+        (
+            dict(
+                email=None,
+                contact_form_url=None,
+                instagram=None,
+                facebook=None,
+                mobile_phone="m",
+                phone="p",
+            ),
+            "sms",
+        ),
+        (
+            dict(
+                email=None,
+                contact_form_url=None,
+                instagram=None,
+                facebook=None,
+                mobile_phone=None,
+                phone="p",
+            ),
+            "telephone",
+        ),
+        (
+            dict(
+                email=None,
+                contact_form_url=None,
+                instagram=None,
+                facebook=None,
+                mobile_phone=None,
+                phone=None,
+            ),
+            None,
+        ),
+    ],
+)
+def test_choose_channel_priority(kwargs, expected):
+    assert choose_channel(**kwargs) == expected

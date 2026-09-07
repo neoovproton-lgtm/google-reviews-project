@@ -81,6 +81,18 @@ def export(status: str = StatusOpt, limit: int = ExportLimitOpt) -> None:
     typer.echo(f"Export : {path}")
 
 
+RetryOpt = typer.Option(False, "--retry-errors", help="Rejoue les enrichissements en erreur.")
+
+
+@app.command()
+def enrich(limit: int | None = LimitOpt, retry_errors: bool = RetryOpt) -> None:
+    """A4 — Email, formulaire, Instagram/Facebook, mobile depuis le site ; canal prioritaire."""
+    _setup()
+    from app.enrichment.run import enrich_all
+
+    typer.echo(enrich_all(limit=limit, retry_errors=retry_errors))
+
+
 @app.command()
 def jobs() -> None:
     """État des jobs de scraping par ville."""

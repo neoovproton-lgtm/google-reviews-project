@@ -42,6 +42,7 @@ class _FixtureHandler(SimpleHTTPRequestHandler):
     ROUTES = {
         "/maps/search/": "maps_search.html",
         "/maps/place/": "maps_place.html",
+        "/contact": "site/contact.html",
     }
 
     def translate_path(self, path: str) -> str:
