@@ -69,6 +69,11 @@ est défini.
 | `GET /mailboxes`, `POST /mailboxes/sync`, `POST /mailboxes/{id}/resume` | Boîtes d'envoi (santé, quota, réactivation). |
 | `POST /webhooks/resend`, `POST /webhooks/brevo?token=` | Événements fournisseur (délivré, bounce, plainte, ouverture). |
 | `GET /p/{token}` | Page publique des réponses rédigées (lien des SMS). |
+| `POST /outreach/{id}/convert`, `POST /establishments/{id}/invite`, `POST /establishments/{id}/manager-added` | Conversion d'un oui, invitation gestionnaire, démarrage de l'essai. |
+| `POST /service/run?force=` | Rafraîchit les avis des clients, rédige, prévient (job). |
+| `GET /replies/to-publish`, `POST /replies/{id}/published` | File de publication et log de publication. |
+| `POST /reports/weekly?force=` | Rapports hebdomadaires clients. |
+| `GET /establishments/{id}/messages` | Journal des messages envoyés au client. |
 
 ```bash
 curl -H "Authorization: Bearer $API_TOKEN" -X POST localhost:8000/scrape \
@@ -105,6 +110,21 @@ Le service `scheduler` enchaîne chaque heure : relève IMAP → prospection (jo
 `OUTREACH_SEND_HOURS`, quotas 20 → 30 /jour/boîte) → approbation des brouillons au veto écoulé.
 Webhooks fournisseur à déclarer : `https://<domaine>/webhooks/resend` (secret Svix dans
 `RESEND_WEBHOOK_SECRET`) et `https://<domaine>/webhooks/brevo?token=<BREVO_WEBHOOK_TOKEN>`.
+
+### Phase D — clients en essai
+
+```bash
+# Un prospect a répondu OK (séquence 12) : profil client + mail d'invitation gestionnaire
+docker compose run --rm cli service-run --force      # ou Telegram : /client 12
+# Accès gestionnaire obtenu : /gestionnaire <client>  (essai 30 jours, avis vérifiés toutes les 6 h)
+docker compose run --rm cli service-inboxes          # notifications Google + vetos par mail
+docker compose run --rm cli weekly-report --force    # rapport hebdomadaire (auto le lundi)
+# Chaque jour : Telegram /apublier → coller sur Google → /publie <id>
+```
+
+Boîtes à configurer dans `.env` : `SERVICE_FROM_ADDRESS` (+ `SERVICE_IMAP_*` pour les vetos par
+mail), `MANAGER_IMAP_*` (compte Google gestionnaire, notifications d'avis),
+`GOOGLE_MANAGER_EMAIL`. Captures d'écran de l'invitation dans `data/onboarding/`.
 
 ### Exploitation
 

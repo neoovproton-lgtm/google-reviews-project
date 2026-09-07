@@ -33,7 +33,10 @@ repondu/
     outreach/     compose.py (C1), sequence.py (C2 : machine à états), mailboxes.py, 
                   email_providers.py (Resend/Brevo/Log), channels.py + forms.py + sms.py (C3),
                   events.py (C5 : webhooks), inbox.py (C4 : IMAP), stats.py (entonnoir)
-    scheduler.py  boucle horaire (service docker `scheduler`)
+    service/      Phase D : mailer.py (mails/SMS/Telegram clients + journal), onboarding.py (D1),
+                  notifications.py + inboxes.py (D2/D3 : boîtes gestionnaire et service),
+                  loop.py (D3 : avis → brouillon → veto → publication, stats), report.py (D4)
+    scheduler.py  boucle horaire (service docker `scheduler`) : prospection + service client
   tests/          pytest ; fixtures HTML dans tests/fixtures/
   data/           cities.csv, base SQLite, exports (ignorés par git sauf cities.csv)
   docs/PRD.md     produit
@@ -79,6 +82,9 @@ docker compose up -d --build   # déploiement VPS
   toujours injectables (`set_provider`, `set_sms`, `set_telegram`) ; tests avec les faux de
   `tests/fakes.py`. Opt-out : registre `optouts`, vérifié à l'enrôlement et avant chaque envoi.
 - Secrets IMAP dans `data/mailboxes.json` (volume, jamais commité), jamais en base.
+- Service client : la fiche Maps est la source de vérité des avis ; les notifications Google ne
+  sont qu'un déclencheur. Une réponse n'est `published` que par action humaine (`/publie`,
+  `POST /replies/{id}/published`), qui marque aussi l'avis comme répondu.
 - Français partout dans les docs, les messages et les données ; identifiants de code en anglais.
 - Tests : pytest, pas de réseau externe. Les tests navigateur servent des fixtures HTML via un
   serveur local et sont marqués `@pytest.mark.browser`.

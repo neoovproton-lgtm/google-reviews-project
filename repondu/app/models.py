@@ -139,11 +139,33 @@ class Establishment(Base):
     auto_publish_delay_h: Mapped[int] = mapped_column(Integer, default=24)
     telegram_chat_id: Mapped[str | None] = mapped_column(String(64), index=True)
     contact_email: Mapped[str | None] = mapped_column(String(255))
+    mobile_phone: Mapped[str | None] = mapped_column(String(64))
     active: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
+    # Phase D — onboarding et essai
+    onboarding_status: Mapped[str] = mapped_column(String(32), default="created")
+    outreach_id: Mapped[int | None] = mapped_column(Integer)
+    invited_at: Mapped[datetime | None] = mapped_column(DateTime)
+    reminded_at: Mapped[datetime | None] = mapped_column(DateTime)
+    manager_added_at: Mapped[datetime | None] = mapped_column(DateTime)
+    trial_started_at: Mapped[datetime | None] = mapped_column(DateTime)
+    trial_ends_at: Mapped[datetime | None] = mapped_column(DateTime)
+    baseline_response_rate: Mapped[float | None] = mapped_column(Float)
+    baseline_rating: Mapped[float | None] = mapped_column(Float)
+    last_review_check_at: Mapped[datetime | None] = mapped_column(DateTime)
+    last_report_at: Mapped[datetime | None] = mapped_column(DateTime)
+
     replies: Mapped[list[Reply]] = relationship(back_populates="establishment")
+
+
+class OnboardingStatus:
+    CREATED = "created"  # profil créé (Telegram / API)
+    INVITED = "invited"  # mail « ajoutez-nous comme gestionnaire » envoyé
+    MANAGER_ADDED = "manager_added"  # accès obtenu, essai en cours
+    ENDED = "ended"  # essai terminé
+    ALL = (CREATED, INVITED, MANAGER_ADDED, ENDED)
 
 
 class ReplyStatus:
@@ -329,3 +351,21 @@ class OptOut(Base):
     contact: Mapped[str] = mapped_column(String(512), unique=True)
     source: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class ClientMessage(Base):
+    """Journal des messages envoyés aux clients (invitation, brouillon, rappel, rapport)."""
+
+    __tablename__ = "client_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    establishment_id: Mapped[int] = mapped_column(ForeignKey("establishments.id"), index=True)
+    reply_id: Mapped[int | None] = mapped_column(ForeignKey("replies.id"))
+    kind: Mapped[str] = mapped_column(String(32), index=True)  # invite|reminder|draft|report|…
+    channel: Mapped[str] = mapped_column(String(16))  # email | sms | telegram
+    to: Mapped[str | None] = mapped_column(String(255))
+    subject: Mapped[str | None] = mapped_column(String(255))
+    body: Mapped[str] = mapped_column(Text)
+    provider_message_id: Mapped[str | None] = mapped_column(String(255))
+    error: Mapped[str | None] = mapped_column(Text)
+    sent_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

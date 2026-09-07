@@ -83,6 +83,25 @@ class Settings(BaseSettings):
     public_base_url: str = "http://127.0.0.1:8000"  # pour les liens /p/{token} (SMS)
     sms_sender: str = "Repondu"  # ≤ 11 caractères alphanumériques
 
+    # Service client (Phase D)
+    google_manager_email: str = "gestion@repondu.example"  # compte Google du projet
+    service_from_address: str = "contact@repondu.example"
+    service_from_name: str = "Répondu"
+    service_email_provider: str = "log"  # resend | brevo | log
+    service_reply_address: str | None = None  # défaut : service_from_address
+    manager_imap_host: str | None = None  # boîte du compte gestionnaire (notifications Google)
+    manager_imap_port: int = 993
+    manager_imap_user: str | None = None
+    manager_imap_password: str | None = None
+    service_imap_host: str | None = None  # boîte de service (réponses / vetos des clients)
+    service_imap_port: int = 993
+    service_imap_user: str | None = None
+    service_imap_password: str | None = None
+    onboarding_reminder_days: int = 3
+    trial_days: int = 30
+    service_review_check_hours: int = 6
+    onboarding_assets_dir: Path = ROOT_DIR / "data" / "onboarding"
+
     log_level: str = Field(default="INFO")
 
     @property

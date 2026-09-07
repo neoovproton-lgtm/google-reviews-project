@@ -231,6 +231,15 @@ class EstablishmentIn(BaseModel):
 class EstablishmentOut(EstablishmentIn):
     id: int
     active: bool
+    onboarding_status: str = "created"
+    outreach_id: int | None = None
+    mobile_phone: str | None = None
+    invited_at: datetime | None = None
+    manager_added_at: datetime | None = None
+    trial_started_at: datetime | None = None
+    trial_ends_at: datetime | None = None
+    baseline_response_rate: float | None = None
+    baseline_rating: float | None = None
     model_config = {"from_attributes": True}
 
 
@@ -655,3 +664,114 @@ async def webhook_brevo(request: Request, token: str | None = None) -> dict:
             else:
                 results.append(apply_provider_event(session, event, source="brevo"))
     return {"ok": True, "results": results}
+
+
+# --- Phase D : onboarding, service, publication ---------------------------------------------
+
+
+@app.post("/outreach/{outreach_id}/convert", dependencies=[AuthDep], status_code=201)
+def convert_outreach_endpoint(outreach_id: int, session: SessionDep) -> EstablishmentOut:
+    from app.service.onboarding import convert_outreach, send_invitation
+
+    o = session.get(Outreach, outreach_id)
+    if o is None:
+        raise HTTPException(status_code=404, detail="Séquence inconnue")
+    est = convert_outreach(session, o)
+    if est.invited_at is None:
+        send_invitation(session, est)
+    return EstablishmentOut.model_validate(est)
+
+
+@app.post("/establishments/{establishment_id}/invite", dependencies=[AuthDep])
+def invite_endpoint(establishment_id: int, session: SessionDep) -> EstablishmentOut:
+    from app.service.onboarding import send_invitation
+
+    est = session.get(Establishment, establishment_id)
+    if est is None:
+        raise HTTPException(status_code=404, detail="Établissement inconnu")
+    send_invitation(session, est)
+    return EstablishmentOut.model_validate(est)
+
+
+@app.post("/establishments/{establishment_id}/manager-added", dependencies=[AuthDep])
+def manager_added_endpoint(establishment_id: int, session: SessionDep) -> EstablishmentOut:
+    from app.service.onboarding import manager_added
+
+    est = session.get(Establishment, establishment_id)
+    if est is None:
+        raise HTTPException(status_code=404, detail="Établissement inconnu")
+    manager_added(session, est)
+    return EstablishmentOut.model_validate(est)
+
+
+@app.post("/service/run", dependencies=[AuthDep], status_code=202)
+def service_run(force: bool = False) -> JobState:
+    """Rafraîchit les avis des clients dus, rédige et notifie (job en arrière-plan)."""
+    from app.db import session_scope
+    from app.service.loop import run_service_cycle
+
+    with _job_lock:
+        if _running.is_set():
+            raise HTTPException(status_code=409, detail="Un job est déjà en cours")
+        _running.set()
+        job = JobState(id=uuid.uuid4().hex[:12], mode="service")
+        _jobs[job.id] = job
+
+    def work():
+        with session_scope() as s:
+            return run_service_cycle(s, force=force)
+
+    _run_in_thread(job, work)
+    return job
+
+
+@app.get("/replies/to-publish", dependencies=[AuthDep])
+def replies_to_publish(session: SessionDep, establishment_id: int | None = None) -> list[ReplyOut]:
+    from app.service.loop import to_publish
+
+    return [ReplyOut.from_reply(r) for r in to_publish(session, establishment_id)]
+
+
+@app.post("/replies/{reply_id}/published", dependencies=[AuthDep])
+def reply_published(reply_id: int, session: SessionDep, by: str = "api") -> ReplyOut:
+    from app.service.loop import mark_published
+
+    reply = session.get(Reply, reply_id)
+    if reply is None:
+        raise HTTPException(status_code=404, detail="Brouillon inconnu")
+    try:
+        mark_published(session, reply, by=by)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return ReplyOut.from_reply(reply)
+
+
+@app.post("/reports/weekly", dependencies=[AuthDep])
+def weekly_reports(session: SessionDep, force: bool = False) -> dict:
+    from app.service.report import send_weekly_reports
+
+    return {"sent": [e.id for e in send_weekly_reports(session, force=force)]}
+
+
+@app.get("/establishments/{establishment_id}/messages", dependencies=[AuthDep])
+def establishment_messages(establishment_id: int, session: SessionDep) -> list[dict]:
+    from app.models import ClientMessage
+
+    rows = session.scalars(
+        select(ClientMessage)
+        .where(ClientMessage.establishment_id == establishment_id)
+        .order_by(ClientMessage.id)
+    )
+    return [
+        {
+            "id": m.id,
+            "kind": m.kind,
+            "channel": m.channel,
+            "to": m.to,
+            "subject": m.subject,
+            "sent_at": m.sent_at,
+            "error": m.error,
+            "reply_id": m.reply_id,
+        }
+        for m in rows
+    ]

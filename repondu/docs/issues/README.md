@@ -26,3 +26,12 @@ Ordre : A1 → A2 → A3 → A4. Chaque issue se termine par `docs/handoff/<issu
 | [C3](C3-multichannel.md) | Formulaire (Playwright), DM via Telegram, SMS | `feat/C3-multichannel` | fait |
 | [C5](C5-deliverability.md) | Webhooks bounce/spam, coupure auto, santé des boîtes | `feat/C5-deliverability` | fait |
 | [C4](C4-tracking.md) | Réponses (IMAP + manuel), entonnoir, `/stats` Telegram | `feat/C4-tracking` | fait |
+
+# Issues — Phase D : onboarding et service
+
+| Issue | Titre | Branche | Statut |
+|---|---|---|---|
+| [D1](D1-client-onboarding.md) | Conversion d'un oui, invitation gestionnaire, rappel, essai | `feat/D1-client-onboarding` | fait |
+| [D2](D2-new-review-detection.md) | Notifications Google (IMAP) + rafraîchissement Maps → tâches | `feat/D2-new-review-detection` | fait |
+| [D3](D3-reply-loop.md) | Avis → réponse → veto 24 h → publication → log, délai < 24 h | `feat/D3-reply-loop` | fait |
+| [D4](D4-weekly-report.md) | Rapport hebdomadaire client chaque lundi | `feat/D4-weekly-report` | fait |

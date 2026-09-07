@@ -296,6 +296,40 @@ def scheduler(interval: int = IntervalOpt) -> None:
     main(interval)
 
 
+ForceOpt = typer.Option(False, "--force", help="Ignore les délais / le jour de la semaine.")
+
+
+@app.command("service-run")
+def service_run(force: bool = ForceOpt) -> None:
+    """D2/D3 — Rafraîchit les avis des clients, rédige les réponses, prévient les clients."""
+    _setup()
+    from app.service.loop import run_service_cycle
+    from app.telegram.client import get_telegram
+
+    with session_scope() as session:
+        typer.echo(run_service_cycle(session, telegram=get_telegram(), force=force))
+
+
+@app.command("weekly-report")
+def weekly_report(force: bool = ForceOpt) -> None:
+    """D4 — Envoie le rapport hebdomadaire aux clients actifs (lundi, ou --force)."""
+    _setup()
+    from app.service.report import send_weekly_reports
+
+    with session_scope() as session:
+        sent = send_weekly_reports(session, force=force)
+    typer.echo(f"{len(sent)} rapport(s) : {[e.name for e in sent]}")
+
+
+@app.command("service-inboxes")
+def service_inboxes() -> None:
+    """D2/D3 — Relève la boîte du compte gestionnaire (Google) et la boîte de service (vetos)."""
+    _setup()
+    from app.scheduler import service_tick
+
+    typer.echo(service_tick())
+
+
 @app.command()
 def jobs() -> None:
     """État des jobs de scraping par ville."""

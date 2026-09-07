@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import logging
 import uuid
 from dataclasses import dataclass, field
@@ -28,6 +29,7 @@ class OutgoingEmail:
     text: str
     reply_to: str | None = None
     headers: dict[str, str] = field(default_factory=dict)
+    attachments: list[tuple[str, bytes, str]] = field(default_factory=list)  # (nom, octets, mime)
 
 
 class EmailProvider(Protocol):
@@ -72,6 +74,11 @@ class ResendProvider:
         }
         if email.reply_to:
             payload["reply_to"] = email.reply_to
+        if email.attachments:
+            payload["attachments"] = [
+                {"filename": name, "content": base64.b64encode(data).decode()}
+                for name, data, _ in email.attachments
+            ]
         try:
             r = self._client.post("/emails", json=payload)
             r.raise_for_status()
@@ -101,6 +108,11 @@ class BrevoProvider:
             payload["replyTo"] = {"email": email.reply_to}
         if email.headers:
             payload["headers"] = email.headers
+        if email.attachments:
+            payload["attachment"] = [
+                {"name": name, "content": base64.b64encode(data).decode()}
+                for name, data, _ in email.attachments
+            ]
         try:
             r = self._client.post("/smtp/email", json=payload)
             r.raise_for_status()

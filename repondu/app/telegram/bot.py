@@ -39,6 +39,9 @@ HELP = (
     "/envoye <id> — marquer un DM comme envoyé\n"
     "/stats — entonnoir de prospection et santé des boîtes\n"
     "/oui <séquence> · /objection <séquence> <note> · /non <séquence> · /stop <séquence>\n"
+    "/client <séquence> — convertir un oui en client et envoyer l'invitation gestionnaire\n"
+    "/gestionnaire <client> — accès obtenu, l'essai de 30 jours démarre\n"
+    "/apublier — réponses approuvées à coller sur Google · /publie <id> — publiée\n"
     "Les réponses proposées arrivent ici avec les boutons Approuver / Refuser."
 )
 
@@ -90,6 +93,14 @@ def _handle_message(message: dict, session: Session, telegram: Telegram) -> None
         _send_stats(chat_id, session, telegram)
     elif command in ("/oui", "/objection", "/non", "/stop"):
         _outcome_command(chat_id, command, text, session, telegram)
+    elif command == "/client":
+        _convert_command(chat_id, text, session, telegram)
+    elif command == "/gestionnaire":
+        _manager_command(chat_id, text, session, telegram)
+    elif command == "/apublier":
+        _to_publish_command(chat_id, session, telegram)
+    elif command == "/publie":
+        _published_command(chat_id, text, session, telegram)
     elif state and state.state:
         _answer_step(chat_id, text, session, telegram, state)
     else:
@@ -256,3 +267,75 @@ def _outcome_command(
     note = parts[2] if len(parts) > 2 else None
     record_outcome(session, o, outcome, note=note, source="telegram")
     telegram.send_message(chat_id, f"Séquence #{o.id} ({o.prospect.name}) → {o.status}.")
+
+
+def _arg_id(text: str) -> int | None:
+    parts = text.split()
+    return int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else None
+
+
+def _convert_command(chat_id: str, text: str, session: Session, telegram: Telegram) -> None:
+    from app.models import Outreach
+    from app.service.onboarding import convert_outreach, send_invitation
+
+    oid = _arg_id(text)
+    o = session.get(Outreach, oid) if oid else None
+    if o is None:
+        telegram.send_message(chat_id, "Usage : /client <séquence>")
+        return
+    est = convert_outreach(session, o)
+    if est.invited_at is None:
+        send_invitation(session, est)
+    telegram.send_message(
+        chat_id,
+        f"Client #{est.id} {est.name} créé, invitation gestionnaire envoyée à "
+        f"{est.contact_email or "(pas d'email)"}.\nAccès obtenu → /gestionnaire {est.id}",
+    )
+
+
+def _manager_command(chat_id: str, text: str, session: Session, telegram: Telegram) -> None:
+    from app.service.onboarding import manager_added
+
+    eid = _arg_id(text)
+    est = session.get(Establishment, eid) if eid else None
+    if est is None:
+        telegram.send_message(chat_id, "Usage : /gestionnaire <client>")
+        return
+    manager_added(session, est)
+    telegram.send_message(
+        chat_id,
+        f"{est.name} : essai démarré, fin le {est.trial_ends_at:%d/%m/%Y}. "
+        "Les avis seront vérifiés toutes les 6 h.",
+    )
+
+
+def _to_publish_command(chat_id: str, session: Session, telegram: Telegram) -> None:
+    from app.service.loop import to_publish
+
+    replies = to_publish(session)
+    if not replies:
+        telegram.send_message(chat_id, "Rien à publier.")
+        return
+    for r in replies[:20]:
+        telegram.send_message(
+            chat_id,
+            f"À publier #{r.id} · {r.establishment.name} · avis {r.review.rating or '?'}★ de "
+            f"{r.review.author or 'anonyme'}\n\n{r.text}\n\n"
+            f"Une fois collée sur Google : /publie {r.id}",
+        )
+
+
+def _published_command(chat_id: str, text: str, session: Session, telegram: Telegram) -> None:
+    from app.service.loop import mark_published
+
+    rid = _arg_id(text)
+    reply = session.get(Reply, rid) if rid else None
+    if reply is None:
+        telegram.send_message(chat_id, "Usage : /publie <id>")
+        return
+    try:
+        mark_published(session, reply, by="telegram")
+    except ValueError as exc:
+        telegram.send_message(chat_id, str(exc))
+        return
+    telegram.send_message(chat_id, f"Réponse #{reply.id} publiée ✅")

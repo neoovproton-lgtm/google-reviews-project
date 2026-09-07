@@ -65,13 +65,22 @@ def _body_text(msg: Message) -> str:
     return payload.decode(msg.get_content_charset() or "utf-8", "replace")
 
 
+def decode_header_value(value) -> str:
+    """En-tête décodé (RFC 2047), robuste aux octets UTF-8 bruts non encodés."""
+    text = str(value or "")
+    try:
+        text = text.encode("ascii", "surrogateescape").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        pass
+    try:
+        return str(email.header.make_header(email.header.decode_header(text)))
+    except Exception:  # noqa: BLE001
+        return text
+
+
 def _extract_address(header_value) -> str:
     """Adresse dans un en-tête From, robuste aux accents et aux encodages exotiques."""
-    text = str(header_value or "")
-    try:
-        text = str(email.header.make_header(email.header.decode_header(text)))
-    except Exception:  # noqa: BLE001
-        pass
+    text = decode_header_value(header_value)
     _, addr = email.utils.parseaddr(text)
     if not addr or "@" not in addr:
         m = _ADDR_RE.search(text)
@@ -89,7 +98,7 @@ def parse_rfc822(raw: bytes, uid: str = "") -> InboundMail:
             date = date.astimezone(UTC).replace(tzinfo=None) if date.tzinfo else date
         except (TypeError, ValueError):
             date = None
-    subject = str(email.header.make_header(email.header.decode_header(msg.get("Subject", ""))))
+    subject = decode_header_value(msg.get("Subject", ""))
     return InboundMail(
         uid=uid,
         from_address=addr.lower(),
