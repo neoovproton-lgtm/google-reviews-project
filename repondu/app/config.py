@@ -66,7 +66,9 @@ class Settings(BaseSettings):
     # Prospection (Phase C)
     mailboxes_file: Path = ROOT_DIR / "data" / "mailboxes.json"
     resend_api_key: str | None = None
+    resend_webhook_secret: str | None = None  # whsec_… (Svix) ; vide = pas de vérification
     brevo_api_key: str | None = None
+    brevo_webhook_token: str | None = None  # ?token=… sur l'URL du webhook ; vide = pas de vérif
     outreach_send_hours: str = "9-18"  # heure de Paris, jours ouvrés
     outreach_timezone: str = "Europe/Paris"
     outreach_followup_days: int = 3  # J+3

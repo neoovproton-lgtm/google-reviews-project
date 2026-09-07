@@ -52,7 +52,13 @@ def compute_stats(session: Session) -> dict:
             .group_by(Prospect.canal_prioritaire)
         ).all()
     )
+    from app.models import Mailbox
+    from app.outreach.mailboxes import mailbox_health
+
+    mailboxes = [mailbox_health(session, mb) for mb in session.scalars(select(Mailbox))]
+
     return {
+        "mailboxes": mailboxes,
         "prospects": prospects,
         "prospects_by_city": {c or "?": int(n) for c, n in by_city},
         "scrape_jobs": jobs,

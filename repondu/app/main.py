@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -602,3 +602,56 @@ def post_manual_sent(message_id: int, session: SessionDep) -> dict:
     if msg is None:
         raise HTTPException(status_code=404, detail="Message introuvable ou déjà traité")
     return {"id": msg.id, "status": msg.status}
+
+
+# --- C5 : webhooks fournisseurs ----------------------------------------------------------------
+
+
+@app.post("/webhooks/resend")
+async def webhook_resend(request: Request) -> dict:
+    from app.outreach.email_providers import parse_resend_event
+    from app.outreach.events import apply_provider_event, verify_svix_signature
+
+    body = await request.body()
+    secret = get_settings().resend_webhook_secret
+    if secret and not verify_svix_signature(secret, dict(request.headers), body):
+        raise HTTPException(status_code=401, detail="Signature invalide")
+    import json
+
+    try:
+        payload = json.loads(body or b"{}")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="JSON invalide") from exc
+    event = parse_resend_event(payload)
+    if event is None or event.type == "other":
+        return {"ok": True, "ignored": True}
+    from app.db import session_scope
+
+    with session_scope() as session:
+        return {"ok": True, **apply_provider_event(session, event, source="resend")}
+
+
+@app.post("/webhooks/brevo")
+async def webhook_brevo(request: Request, token: str | None = None) -> dict:
+    from app.outreach.email_providers import parse_brevo_event
+    from app.outreach.events import apply_provider_event
+
+    expected = get_settings().brevo_webhook_token
+    if expected and token != expected:
+        raise HTTPException(status_code=401, detail="Jeton invalide")
+    try:
+        payload = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="JSON invalide") from exc
+    events = payload if isinstance(payload, list) else [payload]
+    from app.db import session_scope
+
+    results = []
+    with session_scope() as session:
+        for item in events:
+            event = parse_brevo_event(item)
+            if event is None or event.type == "other":
+                results.append({"ignored": True})
+            else:
+                results.append(apply_provider_event(session, event, source="brevo"))
+    return {"ok": True, "results": results}

@@ -24,5 +24,5 @@ Ordre : A1 → A2 → A3 → A4. Chaque issue se termine par `docs/handoff/<issu
 | [C1](C1-email-generator.md) | Générateur de mail (constat chiffré + 2 réponses + essai) | `feat/C1-email-generator` | fait |
 | [C2](C2-sequence.md) | Séquence J0 / J+3 / J+8, boîtes, quotas, opt-out | `feat/C2-sequence` | fait |
 | [C3](C3-multichannel.md) | Formulaire (Playwright), DM via Telegram, SMS | `feat/C3-multichannel` | fait |
-| [C5](C5-deliverability.md) | Webhooks bounce/spam, coupure auto, santé des boîtes | `feat/C5-deliverability` | à faire |
+| [C5](C5-deliverability.md) | Webhooks bounce/spam, coupure auto, santé des boîtes | `feat/C5-deliverability` | fait |
 | [C4](C4-tracking.md) | Réponses (IMAP + manuel), entonnoir, `/stats` Telegram | `feat/C4-tracking` | à faire |
