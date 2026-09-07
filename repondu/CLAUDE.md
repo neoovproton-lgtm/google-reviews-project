@@ -25,6 +25,10 @@ repondu/
     scraping/     Playwright + parseurs purs (maps.py, reviews.py, parsers.py, browser.py)
     scoring.py    score = avis_par_mois × (1 − taux_reponse)
     enrichment/   site web → email, formulaire, réseaux sociaux, mobile ; canal prioritaire
+    llm.py        client Claude Sonnet (messages.parse, sortie structurée) ; set_llm() en tests
+    replies/      prompt.py (règles), checks.py (vérifs pures), safety.py (B2), generator.py,
+                  service.py (brouillons en base, veto/validation), evaluate.py (30 avis test)
+    telegram/     client.py (Bot API, NullTelegram sans jeton), bot.py (onboarding, boutons)
   tests/          pytest ; fixtures HTML dans tests/fixtures/
   data/           cities.csv, base SQLite, exports (ignorés par git sauf cities.csv)
   docs/PRD.md     produit
@@ -61,6 +65,10 @@ docker compose up -d --build   # déploiement VPS
 - Scraping : rythme lent (`SCRAPE_MIN_DELAY_S`/`SCRAPE_MAX_DELAY_S`), reprise sur erreur via la
   table `scrape_jobs`, idempotence par `place_id` (upsert).
 - Statuts prospect : `new` → `reviews_scraped` → `qualified` | `disqualified` → `enriched`.
+- Statuts brouillon (`replies`) : `pending` → `approved` | `rejected` → `published`. Un brouillon
+  `needs_human` (filtre B2 ou vérifications B1 en échec) n'est jamais approuvé automatiquement.
+- LLM : toujours via `app/llm.py` (`get_llm()`), jamais d'appel direct au SDK ailleurs. Tests
+  avec `tests/fakes.py::FakeLLM` ; aucun test ne doit appeler l'API réelle.
 - Français partout dans les docs, les messages et les données ; identifiants de code en anglais.
 - Tests : pytest, pas de réseau externe. Les tests navigateur servent des fixtures HTML via un
   serveur local et sont marqués `@pytest.mark.browser`.

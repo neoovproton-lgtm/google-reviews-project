@@ -29,3 +29,21 @@ class FakeLLM:
         else:
             raise AssertionError(f"FakeLLM : aucune réponse prévue pour {schema.__name__}")
         return raw if isinstance(raw, BaseModel) else schema.model_validate(raw)
+
+
+class FakeTelegram:
+    """Enregistre les messages envoyés au lieu d'appeler l'API Bot."""
+
+    def __init__(self):
+        self.messages: list[dict[str, Any]] = []
+        self.callbacks: list[tuple[str, str | None]] = []
+
+    def send_message(self, chat_id: str, text: str, buttons=None) -> None:
+        self.messages.append({"chat_id": chat_id, "text": text, "buttons": buttons})
+
+    def answer_callback(self, callback_id: str, text: str | None = None) -> None:
+        self.callbacks.append((callback_id, text))
+
+    @property
+    def texts(self) -> list[str]:
+        return [m["text"] for m in self.messages]

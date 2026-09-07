@@ -103,8 +103,10 @@ def check_reply(reply: str, detail_reused: str, profile: Profile, review: Review
             item = item.strip()
             if len(item) >= 3 and normalize(item) in norm:
                 issues.append(f"élément interdit : « {item} »")
-    if profile.signature and normalize(profile.signature) in norm:
-        issues.append("signature incluse par le modèle")
+    if profile.signature and len(profile.signature) >= 4:
+        sig = re.escape(normalize(profile.signature))
+        if re.search(rf"(?<![a-z0-9]){sig}(?![a-z0-9])", norm):
+            issues.append("signature incluse par le modèle")
     if review.text.strip() and not detail_is_in_review(detail_reused, review.text):
         issues.append("aucun élément concret de l'avis repris")
     if review.rating <= 2 and not any(m in norm for m in OFFLINE_CONTACT_MARKERS):

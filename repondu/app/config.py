@@ -60,7 +60,8 @@ class Settings(BaseSettings):
 
     # Telegram (Phase B)
     telegram_bot_token: str | None = None
-    telegram_chat_id: str | None = None
+    telegram_chat_id: str | None = None  # si défini : seul ce chat peut piloter le bot
+    telegram_webhook_secret: str | None = None  # header X-Telegram-Bot-Api-Secret-Token
 
     log_level: str = Field(default="INFO")
 

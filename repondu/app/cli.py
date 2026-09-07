@@ -115,6 +115,57 @@ def eval_replies(reviews: str | None = ReviewsFileOpt) -> None:
     typer.echo(f"Relecture : {path}")
 
 
+EstOpt = typer.Option(..., "--establishment", "-e", help="Identifiant de l'établissement.")
+
+
+@app.command()
+def draft(establishment: int = EstOpt, limit: int | None = LimitOpt) -> None:
+    """B3 — Brouillons de réponse pour les avis sans réponse, envoyés sur Telegram."""
+    _setup()
+    from app.models import Establishment
+    from app.replies.service import draft_for_establishment
+    from app.telegram.client import get_telegram
+
+    with session_scope() as session:
+        est = session.get(Establishment, establishment)
+        if est is None:
+            raise typer.BadParameter("établissement inconnu")
+        drafts = draft_for_establishment(session, est, limit=limit, telegram=get_telegram())
+        for r in drafts:
+            flag = " [validation humaine]" if r.needs_human else ""
+            typer.echo(f"#{r.id} avis {r.review_id}{flag} : {r.text.splitlines()[0][:80]}")
+    typer.echo(f"{len(drafts)} brouillon(s)")
+
+
+@app.command("auto-approve")
+def auto_approve() -> None:
+    """Approuve les brouillons dont le délai de veto est écoulé (à planifier toutes les heures)."""
+    _setup()
+    from app.replies.service import auto_approve_due
+
+    with session_scope() as session:
+        approved = auto_approve_due(session)
+    typer.echo(f"{len(approved)} brouillon(s) approuvé(s) : {[r.id for r in approved]}")
+
+
+WebhookUrlOpt = typer.Option(..., "--url", help="URL publique HTTPS de POST /telegram/webhook")
+
+
+@app.command("telegram-webhook")
+def telegram_webhook(url: str = WebhookUrlOpt) -> None:
+    """Enregistre l'URL du webhook auprès de Telegram (TELEGRAM_BOT_TOKEN requis)."""
+    _setup()
+    from app.telegram.client import HttpTelegram
+
+    settings = get_settings()
+    if not settings.telegram_bot_token:
+        raise typer.BadParameter("TELEGRAM_BOT_TOKEN manquant")
+    result = HttpTelegram(settings.telegram_bot_token).set_webhook(
+        url, settings.telegram_webhook_secret
+    )
+    typer.echo(result)
+
+
 @app.command()
 def jobs() -> None:
     """État des jobs de scraping par ville."""

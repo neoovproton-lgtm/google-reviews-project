@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import get_session, init_db
-from app.models import Prospect, ProspectStatus, utcnow
+from app.models import Establishment, Prospect, ProspectStatus, Reply, ReplyStatus, Review, utcnow
 
 log = logging.getLogger(__name__)
 
@@ -197,3 +197,163 @@ def stats(session: SessionDep) -> dict:
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+# --- Phase B : établissements, brouillons, Telegram ----------------------------------------
+
+
+class EstablishmentIn(BaseModel):
+    name: str
+    prospect_id: int | None = None
+    cuisine_type: str | None = None
+    tone: str = "chaleureux et professionnel"
+    signature: str | None = None
+    manager_first_name: str | None = None
+    never_say: str | None = None
+    use_tutoiement: bool = False
+    auto_publish_delay_h: int = 24
+    telegram_chat_id: str | None = None
+    contact_email: str | None = None
+
+
+class EstablishmentOut(EstablishmentIn):
+    id: int
+    active: bool
+    model_config = {"from_attributes": True}
+
+
+@app.post("/establishments", dependencies=[AuthDep], status_code=201)
+def create_establishment(body: EstablishmentIn, session: SessionDep) -> EstablishmentOut:
+    if body.prospect_id is not None and session.get(Prospect, body.prospect_id) is None:
+        raise HTTPException(status_code=404, detail="Prospect inconnu")
+    data = body.model_dump()
+    data["use_tutoiement"] = int(data["use_tutoiement"])
+    est = Establishment(**data)
+    session.add(est)
+    session.flush()
+    return EstablishmentOut.model_validate(est)
+
+
+@app.get("/establishments", dependencies=[AuthDep])
+def list_establishments(session: SessionDep) -> list[EstablishmentOut]:
+    return [EstablishmentOut.model_validate(e) for e in session.scalars(select(Establishment))]
+
+
+class ReplyOut(BaseModel):
+    id: int
+    review_id: int
+    establishment_id: int
+    establishment_name: str
+    review_rating: int | None
+    review_author: str | None
+    review_text: str | None
+    text: str
+    needs_human: bool
+    safety_flags: list | None
+    check_issues: list | None
+    status: str
+    created_at: datetime
+    decided_at: datetime | None
+    decision_by: str | None
+
+    @classmethod
+    def from_reply(cls, r: Reply) -> ReplyOut:
+        return cls(
+            id=r.id,
+            review_id=r.review_id,
+            establishment_id=r.establishment_id,
+            establishment_name=r.establishment.name,
+            review_rating=r.review.rating,
+            review_author=r.review.author,
+            review_text=r.review.text,
+            text=r.text,
+            needs_human=bool(r.needs_human),
+            safety_flags=r.safety_flags,
+            check_issues=r.check_issues,
+            status=r.status,
+            created_at=r.created_at,
+            decided_at=r.decided_at,
+            decision_by=r.decision_by,
+        )
+
+
+class DraftRequest(BaseModel):
+    limit: int | None = None
+    notify: bool = True
+
+
+@app.post("/establishments/{establishment_id}/draft", dependencies=[AuthDep])
+def draft_replies(establishment_id: int, body: DraftRequest, session: SessionDep) -> list[ReplyOut]:
+    from app.replies.service import draft_for_establishment
+    from app.telegram.client import get_telegram
+
+    est = session.get(Establishment, establishment_id)
+    if est is None:
+        raise HTTPException(status_code=404, detail="Établissement inconnu")
+    drafts = draft_for_establishment(
+        session, est, limit=body.limit, telegram=get_telegram() if body.notify else None
+    )
+    return [ReplyOut.from_reply(r) for r in drafts]
+
+
+@app.get("/reviews/pending", dependencies=[AuthDep])
+def reviews_pending(session: SessionDep, establishment_id: int | None = None) -> list[ReplyOut]:
+    from app.replies.service import pending_replies
+
+    return [ReplyOut.from_reply(r) for r in pending_replies(session, establishment_id)]
+
+
+class DecisionIn(BaseModel):
+    decision: Literal["approve", "reject"]
+    text: str | None = None
+    by: str = "api"
+
+
+@app.post("/reviews/{review_id}/decision", dependencies=[AuthDep])
+def review_decision(review_id: int, body: DecisionIn, session: SessionDep) -> ReplyOut:
+    from app.replies.service import decide, latest_reply_for_review
+
+    if session.get(Review, review_id) is None:
+        raise HTTPException(status_code=404, detail="Avis inconnu")
+    reply = latest_reply_for_review(session, review_id)
+    if reply is None:
+        raise HTTPException(status_code=404, detail="Aucun brouillon pour cet avis")
+    try:
+        decide(session, reply, body.decision, by=body.by, text=body.text)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return ReplyOut.from_reply(reply)
+
+
+@app.post("/reviews/auto-approve", dependencies=[AuthDep])
+def reviews_auto_approve(session: SessionDep) -> dict:
+    from app.replies.service import auto_approve_due
+
+    approved = auto_approve_due(session)
+    return {"approved": [r.id for r in approved]}
+
+
+@app.get("/replies", dependencies=[AuthDep])
+def list_replies(session: SessionDep, status: str | None = None) -> list[ReplyOut]:
+    if status and status not in ReplyStatus.ALL:
+        raise HTTPException(status_code=422, detail=f"status doit être parmi {ReplyStatus.ALL}")
+    stmt = select(Reply)
+    if status:
+        stmt = stmt.where(Reply.status == status)
+    return [ReplyOut.from_reply(r) for r in session.scalars(stmt.order_by(Reply.id))]
+
+
+@app.post("/telegram/webhook")
+def telegram_webhook(
+    update: dict,
+    session: SessionDep,
+    x_telegram_bot_api_secret_token: Annotated[str | None, Header()] = None,
+) -> dict:
+    from app.telegram.bot import handle_update
+    from app.telegram.client import get_telegram
+
+    secret = get_settings().telegram_webhook_secret
+    if secret and x_telegram_bot_api_secret_token != secret:
+        raise HTTPException(status_code=401, detail="Secret invalide")
+    handle_update(update, session, get_telegram())
+    return {"ok": True}
