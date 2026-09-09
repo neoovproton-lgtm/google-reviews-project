@@ -21,6 +21,13 @@ Code : dépôt `neoovproton-lgtm/google-reviews-project`, dossier `repondu/`, br
 (conventions), `docs/handoff/*.md` (état exact de chaque issue), `docs/openapi.json`
 (contrat complet, 37 routes, aussi servi par l'appli sur `GET /openapi.json`).
 
+## 1 bis. Mise en service autonome
+
+`docs/OPENCLAW_MISSION_J1.md` est la mission complète de J1 : OpenClaw installe, diagnostique
+avec `repondu doctor` (`GET /doctor`, Telegram `/doctor`), ne demande à l'humain que les secrets
+manquants, puis enchaîne les phases dès qu'elles sont prêtes. `scripts/bootstrap.sh` fait
+l'installation VPS (Docker, Caddy, HTTPS, build).
+
 ## 2. Accès
 
 - Base : `http://127.0.0.1:8000` sur le VPS (mettre un reverse proxy HTTPS devant si OpenClaw

@@ -6,6 +6,17 @@ Guide agents : `CLAUDE.md`. Issues : `docs/issues/`. Handoffs : `docs/handoff/`.
 Intégration OpenClaw : `docs/OPENCLAW.md` (contrat d'API, cadences, garde-fous) et
 `docs/openapi.json`. Mise en service humaine : `docs/RUNBOOK.md`.
 
+## Mise en service rapide
+
+```bash
+git clone https://github.com/neoovproton-lgtm/google-reviews-project.git
+cd google-reviews-project && git checkout claude/repondu-project-setup-mjwy1p && cd repondu
+sudo bash scripts/bootstrap.sh api.votre-domaine.fr   # Docker, Caddy, HTTPS, build, démarrage
+docker compose run --rm cli doctor                     # ce qui manque, secret par secret
+```
+
+Mission autonome pour OpenClaw : `docs/OPENCLAW_MISSION_J1.md`.
+
 ## Déploiement sur le VPS (Docker)
 
 Prérequis : Docker ≥ 24 avec le plugin Compose, proxies résidentiels accessibles depuis le VPS.

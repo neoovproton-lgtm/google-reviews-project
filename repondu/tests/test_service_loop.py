@@ -243,6 +243,7 @@ def test_publication_log_and_stats(db):
         decide(s, reply, "approve", by="neo")
         handle_update({"message": {"chat": {"id": 7}, "text": "/apublier"}}, s, tg)
         assert f"À publier #{reply.id}" in tg.texts[-1] and f"/publie {reply.id}" in tg.texts[-1]
+        s.query(Review).one().date = utcnow() - timedelta(hours=2)  # délai mesuré en temps réel
         handle_update({"message": {"chat": {"id": 7}, "text": f"/publie {reply.id}"}}, s, tg)
         assert tg.texts[-1] == f"Réponse #{reply.id} publiée ✅"
         assert reply.status == ReplyStatus.PUBLISHED and reply.published_at is not None
@@ -250,7 +251,7 @@ def test_publication_log_and_stats(db):
         assert review.has_owner_response == 1 and review.owner_response_text == reply.text
         handle_update({"message": {"chat": {"id": 7}, "text": f"/publie {reply.id}"}}, s, tg)
         assert "non approuvé" in tg.texts[-1]
-        stats = loop.service_stats(s, now=NOW + timedelta(hours=2))
+        stats = loop.service_stats(s)
         assert (
             stats["published"] == 1
             and stats["pct_under_24h"] == 1.0

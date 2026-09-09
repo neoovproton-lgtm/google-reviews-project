@@ -347,6 +347,25 @@ def bilan(send_surveys: bool = SendSurveysOpt) -> None:
         typer.echo(format_bilan(_bilan(session)))
 
 
+JsonOpt = typer.Option(False, "--json", help="Sortie JSON (pour OpenClaw).")
+
+
+@app.command()
+def doctor(json_out: bool = JsonOpt) -> None:
+    """Vérifie chaque secret et dépendance ; liste ce qu'un humain doit encore fournir."""
+    import json as _json
+    import logging as _logging
+
+    _logging.basicConfig(level="WARNING")
+    from app.doctor import format_doctor, run_doctor
+
+    report = run_doctor()
+    typer.echo(
+        _json.dumps(report, ensure_ascii=False, indent=1) if json_out else format_doctor(report)
+    )
+    raise typer.Exit(code=0 if report["ok"] else 1)
+
+
 @app.command()
 def jobs() -> None:
     """État des jobs de scraping par ville."""

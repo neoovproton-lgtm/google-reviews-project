@@ -821,3 +821,11 @@ def get_bilan(session: SessionDep) -> dict:
     from app.service.survey import bilan
 
     return bilan(session)
+
+
+@app.get("/doctor", dependencies=[AuthDep])
+def doctor_endpoint() -> dict:
+    """État des secrets et dépendances (jamais les valeurs). Pour OpenClaw et Telegram."""
+    from app.doctor import run_doctor
+
+    return run_doctor()

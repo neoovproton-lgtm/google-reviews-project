@@ -43,6 +43,7 @@ HELP = (
     "/gestionnaire <client> — accès obtenu, l'essai de 30 jours démarre\n"
     "/apublier — réponses approuvées à coller sur Google · /publie <id> — publiée\n"
     "/bilan — chiffres du bilan · /bilan <client> oui|non [prix] [manque…] — saisir un appel\n"
+    "/doctor — état des secrets et dépendances, ce qu'il reste à fournir\n"
     "Les réponses proposées arrivent ici avec les boutons Approuver / Refuser."
 )
 
@@ -104,6 +105,10 @@ def _handle_message(message: dict, session: Session, telegram: Telegram) -> None
         _published_command(chat_id, text, session, telegram)
     elif command == "/bilan":
         _bilan_command(chat_id, text, session, telegram)
+    elif command == "/doctor":
+        from app.doctor import format_doctor, run_doctor
+
+        telegram.send_message(chat_id, format_doctor(run_doctor()))
     elif state and state.state:
         _answer_step(chat_id, text, session, telegram, state)
     else:
