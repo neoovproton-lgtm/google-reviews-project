@@ -71,12 +71,20 @@ Lis d'abord `repondu/docs/OPENCLAW.md` (ton rôle, contrat d'API, garde-fous) pu
 9. **Phase D** : sur chaque `yes`, `POST /outreach/{id}/convert` ; rappelle à l'humain
    d'accepter l'invitation Google puis d'envoyer `/gestionnaire <client>`. Le reste est automatique.
 
+## Si l'agent est Claude Code installé sur le VPS
+
+Même mission, deux différences : tu es déjà sur la machine (pas de SSH, travaille dans le
+dossier cloné), et tu as le droit de corriger le code quand un test terrain échoue, en
+particulier `app/scraping/dom.py` si le test Google Maps ne remplit pas `prospects`. Après
+toute correction : `make test` (ou `.venv/bin/pytest`) doit rester vert, puis commit sur une
+branche `fix/<sujet>` et `docker compose up -d --build`.
+
 ## Ce que tu ne fais jamais
 
 - Approuver un brouillon `needs_human`. Réactiver une boîte coupée. Envoyer hors fenêtre.
 - Coller un secret dans un message, un log ou un commit. `doctor` ne montre jamais les valeurs, toi non plus.
 - Lancer deux jobs en même temps (`409`) : attends `GET /jobs/{id}` → `done`.
-- Modifier le code. Si quelque chose casse, rapporte le message d'erreur exact à l'humain.
+- Modifier le code (sauf Claude Code sur le VPS, voir ci-dessus). Sinon, rapporte l'erreur exacte à l'humain.
 
 ## Rapport
 
